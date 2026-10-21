@@ -85,30 +85,38 @@ export default function MathGame() {
   };
 
   const generateNewPuzzle = () => {
-    if (!isWasmReady || !wasm) return;
-    setGenerationError(false); // تصفير حالة الخطأ
-    
-    try {
-      const newSeed = Math.floor(Math.random() * 1000000);
-      setSeed(newSeed);
-      const newPuzzle = wasm.generate_puzzle(newSeed); 
-      
-      // التحقق من أن المحرك أعاد لغزاً صالحاً
-      if (!newPuzzle) {
-        throw new Error("WASM returned an invalid puzzle.");
-      }
-
-      setPuzzle(newPuzzle);
-      setInputAnswers({});
-      setSelectedChoice(null);
-      setSingleInput('');
-      setIsAnswered(false);
-      setIsCorrect(false);
-    } catch (error) {
-      console.error("🚨 WASM Generation Error:", error);
-      setGenerationError(true); // إظهار شاشة الخطأ بدلاً من التعليق
+  if (!isWasmReady || !wasm) return;
+  setGenerationError(false); 
+  
+  try {
+    // 🆕 1. فحص هل الدالة موجودة أصلاً في ملف الـ WASM
+    if (typeof wasm.generate_puzzle !== 'function') {
+      throw new Error("الدالة generate_puzzle غير موجودة في ملف الـ WASM! تأكد من عمل Build صحيح.");
     }
-  };
+
+    // 🆕 2. تجربة Seed ثابت مؤقتاً لمعرفة إذا كان العشوائي هو سبب المشكلة
+    const newSeed = 12345; // بدلاً من Math.floor(Math.random() * 1000000)
+    
+    console.log("⏳ جاري توليد اللغز بالـ Seed:", newSeed);
+    const newPuzzle = wasm.generate_puzzle(newSeed); 
+    console.log("✅ تم توليد اللغز بنجاح:", newPuzzle);
+    
+    if (!newPuzzle) {
+      throw new Error("المحرك أعاد قيمة فارغة (null/undefined).");
+    }
+
+    setSeed(newSeed);
+    setPuzzle(newPuzzle);
+    setInputAnswers({});
+    setSelectedChoice(null);
+    setSingleInput('');
+    setIsAnswered(false);
+    setIsCorrect(false);
+  } catch (error) {
+    console.error("🚨 WASM Generation Error:", error);
+    setGenerationError(true); 
+  }
+};
 
   const startGame = () => {
     setCurrentRoundScore(0);
