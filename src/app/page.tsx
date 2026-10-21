@@ -12,13 +12,13 @@ export default function MathGame() {
   const [isAnswered, setIsAnswered] = useState(false);
   const [inputAnswers, setInputAnswers] = useState<any>({});
 
-  // تحميل محرك WASM من مجلد public
+  // تحميل محرك WASM بطريقة احترافية
   useEffect(() => {
     async function loadWasm() {
       try {
-        // استيراد الملف من المجلد العام
-        const module = await import('/math_engine.js');
-        await module.default(); // تهيئة WASM
+        // استخدام webpackIgnore يمنع أخطاء البناء، ويجعل المتصفح يحمله مباشرة
+        const module = await import(/* webpackIgnore: true */ '/math_engine.js');
+        await module.default(); 
         setWasm(module);
         setIsWasmReady(true);
       } catch (e) {
@@ -59,7 +59,6 @@ export default function MathGame() {
 
   if (!isWasmReady) return <div className="min-h-screen flex items-center justify-center text-white">جاري تشغيل محرك Rust... ⚙️</div>;
 
-  // ... (باقي كود الواجهة كما هو تماماً بدون أي تغيير) ...
   // --- شاشة القائمة الرئيسية ---
   if (screen === 'menu') {
     return (
