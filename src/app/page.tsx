@@ -58,19 +58,23 @@ export default function MathGame() {
     let correct = false;
 
     if (puzzle.interaction_type === 'multi_input') {
-      // التحقق الذكي: هل إجابة المستخدم تحقق نفس مجموع الأرجل؟
-      const userLegs = (parseInt(answer.chickens) * 2) + (parseInt(answer.ducks) * 2) + (parseInt(answer.rabbits) * 4);
-      const correctLegs = (puzzle.correct_answer.chickens * 2) + (puzzle.correct_answer.ducks * 2) + (puzzle.correct_answer.rabbits * 4);
-      
-      // إذا كان مجموع الأرجل متطابقاً ومجموع الدجاج والأرانب متطابقاً، فالإجابة صحيحة رياضياً
-      const userSum = parseInt(answer.chickens) + parseInt(answer.rabbits);
-      const correctSum = puzzle.correct_answer.chickens + puzzle.correct_answer.rabbits;
+      // التطبيع الدقيق (Normalization): تحويل إجابات المستخدم إلى أرقام
+      const uChickens = Number(answer.chickens);
+      const uDucks = Number(answer.ducks);
+      const uRabbits = Number(answer.rabbits);
 
-      if (userLegs === correctLegs && userSum === correctSum) {
+      // تحويل إجابة Rust إلى أرقام
+      const cChickens = Number(puzzle.correct_answer.chickens);
+      const cDucks = Number(puzzle.correct_answer.ducks);
+      const cRabbits = Number(puzzle.correct_answer.rabbits);
+
+      // مقارنة صارمة ومباشرة (Exact Match)
+      if (uChickens === cChickens && uDucks === cDucks && uRabbits === cRabbits) {
         correct = true;
       }
     } else {
-      correct = String(answer) === String(puzzle.correct_answer);
+      // مقارنة صارمة للسلاسل العددية
+      correct = Number(answer) === Number(puzzle.correct_answer);
     }
 
     setIsCorrect(correct);
@@ -141,7 +145,12 @@ export default function MathGame() {
               </div>
             ))}
             {!isAnswered && (
-              <button onClick={() => checkAnswer(inputAnswers)} className="w-full bg-blue-600 hover:bg-blue-500 font-bold py-3 rounded-xl mt-4">
+              <button 
+                onClick={() => checkAnswer(inputAnswers)} 
+                // منع الإرسال إذا كانت أي خانة فارغة
+                disabled={!inputAnswers.chickens || !inputAnswers.ducks || !inputAnswers.rabbits}
+                className="w-full bg-blue-600 hover:bg-blue-500 disabled:bg-slate-600 disabled:cursor-not-allowed font-bold py-3 rounded-xl mt-4 transition-all"
+              >
                 تحقق من الإجابة
               </button>
             )}
@@ -157,7 +166,11 @@ export default function MathGame() {
                 onChange={(e) => setSelectedAnswer(e.target.value)}
                 className="w-full text-center bg-slate-800 border-2 border-slate-600 rounded-xl p-4 text-2xl font-bold text-white focus:outline-none focus:border-blue-500"
              />
-             <button onClick={() => checkAnswer(selectedAnswer)} className="w-full bg-blue-600 hover:bg-blue-500 font-bold py-3 rounded-xl">
+             <button 
+                onClick={() => checkAnswer(selectedAnswer)} 
+                disabled={!selectedAnswer}
+                className="w-full bg-blue-600 hover:bg-blue-500 disabled:bg-slate-600 disabled:cursor-not-allowed font-bold py-3 rounded-xl transition-all"
+             >
                 تأكيد
              </button>
            </div>
