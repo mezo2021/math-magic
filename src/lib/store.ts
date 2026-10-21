@@ -1,5 +1,19 @@
 // src/lib/store.ts
 
+export interface Achievement {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+}
+
+export const ALL_ACHIEVEMENTS: Achievement[] = [
+  { id: 'first_win', title: 'المبتدئ الذكي', description: 'حل أول لغز بنجاح', icon: '🐣' },
+  { id: 'score_50', title: 'السريع', description: 'تحقيق 50 نقطة في جولة واحدة', icon: '⚡' },
+  { id: 'score_100', title: 'الأسطورة', description: 'وصول أعلى نتيجة إلى 100 نقطة', icon: '🏆' },
+  { id: 'challenge_win', title: 'قاهر التحديات', description: 'الفوز في أول تحدٍ ضد صديق', icon: '⚔️' },
+];
+
 export interface PlayerProfile {
   schemaVersion: number;
   profile: {
@@ -38,7 +52,6 @@ const defaultProfile: PlayerProfile = {
   },
 };
 
-// تحميل البيانات مع الترحيل التلقائي للبيانات القديمة
 export function loadPlayerStore(): PlayerProfile {
   if (typeof window === 'undefined') return defaultProfile;
   
@@ -51,10 +64,8 @@ export function loadPlayerStore(): PlayerProfile {
       }
     }
     
-    // ترحيل مفتاح النقاط القديم إن وجد (math_magic_score)
     const legacyScore = localStorage.getItem('math_magic_score');
     const initialProfile = { ...defaultProfile };
-    
     if (legacyScore) {
       initialProfile.progress.highestScore = parseInt(legacyScore, 10) || 0;
     }
@@ -67,7 +78,6 @@ export function loadPlayerStore(): PlayerProfile {
   }
 }
 
-// حفظ بيانات اللاعب بشكل آمن
 export function savePlayerStore(data: PlayerProfile): void {
   if (typeof window === 'undefined') return;
   
