@@ -66,7 +66,6 @@ export default function MathGame() {
       ? 'bg-black/20 backdrop-blur-xl border-2 border-pink-500/40' 
       : 'bg-black/30 backdrop-blur-xl border-2 border-cyan-500/30',
     inputBg: 'bg-black/20 border-2 border-white/30 focus:border-white text-white placeholder-white/60',
-    // أزرار واضحة وبدون توهج يغطي على النص
     primaryBtn: isBarbie 
       ? 'bg-pink-600 hover:bg-pink-500 text-white border-2 border-pink-400' 
       : 'bg-blue-600 hover:bg-blue-500 text-white border-2 border-cyan-400',
@@ -174,7 +173,6 @@ export default function MathGame() {
           </button>
         </div>
 
-        {/* العنوان الرئيسي النظيف والتأثير المتدرج الواضح */}
         <h1 className={`text-5xl md:text-7xl font-black text-transparent bg-clip-text bg-gradient-to-r ${isBarbie ? 'from-pink-200 to-purple-300' : 'from-cyan-300 to-blue-200'} mb-4 text-center my-6`}>
           {t.appTitle}
         </h1>
@@ -199,7 +197,6 @@ export default function MathGame() {
           className={`mb-8 ${themeStyles.inputBg} p-5 rounded-3xl text-center w-full max-w-md focus:outline-none text-2xl font-black placeholder-white/50 backdrop-blur-md`}
         />
 
-        {/* زر ابدأ التحدي بالنص الناصع والواضح جداً */}
         <button onClick={startGame} className={`w-full max-w-md ${themeStyles.primaryBtn} p-6 rounded-3xl flex items-center justify-center gap-4 text-3xl font-black mb-10 transition-transform active:scale-95 shadow-xl`}>
           <span className="text-4xl">🧠</span> 
           <span className="text-white drop-shadow-md">{activeChallenge ? t.acceptChallenge : t.startChallenge}</span>
