@@ -41,7 +41,6 @@ export default function MathGame() {
   const [isAnswered, setIsAnswered] = useState(false);
   const [isCorrect, setIsCorrect] = useState(false);
   
-  // 🆕 تغيير النوع ليقبل نصوص الأخطاء
   const [generationError, setGenerationError] = useState<string | null>(null);
 
   const [activeChallenge, setActiveChallenge] = useState<ChallengeData | null>(null);
@@ -90,15 +89,16 @@ export default function MathGame() {
     
     try {
       if (typeof wasm.generate_puzzle !== 'function') {
-        throw new Error("الدالة generate_puzzle غير موجودة في ملف الـ WASM. تأكد من عمل Build صحيح.");
+        throw new Error("الدالة generate_puzzle غير موجودة في ملف الـ WASM.");
       }
 
       const newSeed = Math.floor(Math.random() * 1000000);
-      console.log("⏳ جاري توليد اللغز بالـ Seed:", newSeed);
-      const newPuzzle = wasm.generate_puzzle(newSeed); 
+      
+      // 🆕 تحويل الـ Seed إلى BigInt هنا
+      const newPuzzle = wasm.generate_puzzle(BigInt(newSeed)); 
       
       if (!newPuzzle) {
-        throw new Error("المحرك أعاد قيمة فارغة (null/undefined). قد يكون هناك خطأ في كود Rust.");
+        throw new Error("المحرك أعاد قيمة فارغة (null/undefined).");
       }
 
       setSeed(newSeed);
@@ -110,7 +110,6 @@ export default function MathGame() {
       setIsCorrect(false);
     } catch (error: any) {
       console.error("🚨 WASM Generation Error:", error);
-      // 🆕 عرض نص الخطأ على الشاشة
       setGenerationError(error.message || String(error));
     }
   };
@@ -135,7 +134,8 @@ export default function MathGame() {
       answerPayload = { value: Number(singleInput) };
     }
 
-    const correct = wasm.validate_answer(seed, answerPayload);
+    // 🆕 تحويل الـ Seed إلى BigInt هنا أيضاً
+    const correct = wasm.validate_answer(BigInt(seed), answerPayload);
     setIsCorrect(correct);
 
     const pointsEarned = correct ? 10 : 0;
@@ -276,7 +276,6 @@ export default function MathGame() {
     );
   }
 
-  // 🛡️ شاشة عرض الخطأ (الآن تعرض النص الحقيقي للخطأ)
   if (screen === 'puzzle' && !puzzle) {
     if (generationError) {
       return (
@@ -284,7 +283,6 @@ export default function MathGame() {
           <div className="text-6xl mb-4">💥</div>
           <h1 className="text-2xl font-bold mb-4">{lang === 'ar' ? 'فشل توليد اللغز' : 'Puzzle generation failed'}</h1>
           
-          {/* 🆕 عرض نص الخطأ هنا */}
           <div className="bg-black/50 border border-red-500/50 p-4 rounded-xl mb-6 w-full max-w-md overflow-auto text-left" dir="ltr">
             <code className="text-red-400 font-mono text-sm break-words">
               {generationError}
