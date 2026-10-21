@@ -2,10 +2,12 @@
 
 import { useState, useEffect } from 'react';
 import { parseChallengeToken, ChallengeData } from '@/lib/challenge';
+import { loadMathEngine } from '@/lib/wasm-loader';
 import ChallengeShare from '@/components/ChallengeShare';
 
 export default function MathGame() {
   const [isWasmReady, setIsWasmReady] = useState(false);
+  const [wasmError, setWasmError] = useState(false);
   const [wasm, setWasm] = useState<any>(null);
   const [screen, setScreen] = useState('menu'); // menu, puzzle, end
   const [puzzle, setPuzzle] = useState<any>(null);
@@ -17,23 +19,21 @@ export default function MathGame() {
   const [isAnswered, setIsAnswered] = useState(false);
   const [isCorrect, setIsCorrect] = useState(false);
   
-  // حالة التحدي
   const [activeChallenge, setActiveChallenge] = useState<ChallengeData | null>(null);
   const [playerName, setPlayerName] = useState("لاعب مجهول");
 
   useEffect(() => {
-    // 1. تحميل WASM
-    async function loadWasm() {
+    // 1. تحميل WASM عبر الطبقة المركزية
+    async function initEngine() {
       try {
-        const module = await import(/* webpackIgnore: true */ '/math-magic/math_engine.js');
-        await module.default('/math-magic/math_engine_bg.wasm');
+        const module = await loadMathEngine();
         setWasm(module);
         setIsWasmReady(true);
       } catch (e) {
-        console.error("فشل تحميل محرك Rust", e);
+        setWasmError(true);
       }
     }
-    loadWasm();
+    initEngine();
     
     // 2. قراءة التحدي من الـ URL
     const urlParams = new URLSearchParams(window.location.search);
@@ -43,7 +43,7 @@ export default function MathGame() {
       if (challengeData) setActiveChallenge(challengeData);
     }
 
-    // 3. استرجاع أفضل نتيجة (محلياً)
+    // 3. استرجاع أفضل نتيجة
     const savedScore = localStorage.getItem('math_magic_score');
     if (savedScore) setScore(parseInt(savedScore));
   }, []);
@@ -59,7 +59,6 @@ export default function MathGame() {
     if (!isWasmReady || !wasm) return;
     const newSeed = Math.floor(Math.random() * 1000000);
     setSeed(newSeed);
-    // توليد اللغز (مزرعة فقط في هذا المثال لتبسيط الواجهة)
     const newPuzzle = wasm.generate_puzzle(newSeed); 
     setPuzzle(newPuzzle);
     setInputAnswers({});
@@ -74,18 +73,15 @@ export default function MathGame() {
     const correct = wasm.validate_answer(seed, answer);
     setIsCorrect(correct);
 
-    if (correct) {
-      setScore(prev => prev + 10);
-    }
+    if (correct) setScore(prev => prev + 10);
     
-    // الانتقال للغز التالي أو النهاية بعد تأخير بسيط
     setTimeout(() => {
       if (questionsAnswered + 1 >= 5) {
-        // انتهت الجلسة
         setScreen('end');
-        // حفظ أفضل نتيجة
         const currentBest = parseInt(localStorage.getItem('math_magic_score') || '0');
-        if (score + 10 > currentBest) localStorage.setItem('math_magic_score', (score + 10).toString());
+        if (score + (correct ? 10 : 0) > currentBest) {
+          localStorage.setItem('math_magic_score', (score + (correct ? 10 : 0)).toString());
+        }
       } else {
         setQuestionsAnswered(prev => prev + 1);
         generateNewPuzzle();
@@ -93,9 +89,25 @@ export default function MathGame() {
     }, 2000);
   };
 
-  if (!isWasmReady) return <div className="min-h-screen flex items-center justify-center text-white bg-slate-900">جاري تشغيل محرك Rust... ⚙️</div>;
+  // شاشة الخطأ في حال فشل تحميل WASM
+  if (wasmError) return (
+    <div className="min-h-screen flex flex-col items-center justify-center text-white bg-slate-900 p-6 text-center">
+      <div className="text-6xl mb-4">⚠️</div>
+      <h1 className="text-2xl font-bold mb-4">تعذر تشغيل محرك الألغاز</h1>
+      <p className="text-slate-400 mb-6">حدث خطأ أثناء تحميل ملفات النظام. يرجى التأكد من اتصالك بالإنترنت وإعادة المحاولة.</p>
+      <button onClick={() => window.location.reload()} className="bg-blue-600 px-6 py-3 rounded-xl font-bold">إعادة المحاولة 🔄</button>
+    </div>
+  );
 
-  // --- شاشة القائمة الرئيسية ---
+  if (!isWasmReady) return (
+    <div className="min-h-screen flex flex-col items-center justify-center text-white bg-slate-900">
+      <div className="text-6xl mb-6 animate-bounce">⚙️</div>
+      <div className="text-2xl font-bold mb-2 text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-500">
+        جاري تشغيل محرك Rust...
+      </div>
+    </div>
+  );
+
   if (screen === 'menu') {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center p-6 text-white bg-slate-900">
@@ -127,7 +139,6 @@ export default function MathGame() {
     );
   }
 
-  // --- شاشة نهاية اللعبة ---
   if (screen === 'end') {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center p-6 text-white bg-slate-900 text-center">
@@ -157,7 +168,6 @@ export default function MathGame() {
     );
   }
 
-  // --- شاشة اللغز ---
   return (
     <div className="min-h-screen flex flex-col text-white bg-slate-900">
       <header className="flex justify-between items-center p-4 bg-slate-800 shadow-md">
