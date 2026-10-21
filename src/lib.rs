@@ -35,16 +35,22 @@ pub fn generate_animal_puzzle() -> JsValue {
 
     // التوليد العكسي: البدء بالإجابة الصحيحة أولاً
     let chickens: u32 = rng.gen_range(2..=7);
-    let ducks: u32 = rng.gen_range(2..=7);
+    let mut ducks: u32 = rng.gen_range(2..=7);
     let rabbits: u32 = rng.gen_range(1..=4);
+
+    // إصلاح هندسي: إجبار المحرك على اختيار أرقام مختلفة حتى لا يكون الفرق صفراً
+    while ducks == chickens {
+        ducks = rng.gen_range(2..=7);
+    }
 
     let total_legs = (chickens * 2) + (ducks * 2) + (rabbits * 4);
     let diff_duck_chicken = (chickens as i32 - ducks as i32).abs();
     let sum_chicken_rabbit = chickens + rabbits;
 
+    // إصلاح لغوي: توضيح الاتجاه بدلاً من كلمة "الفرق" المبهمة
     let prompt = format!(
         "في مزرعة ذكية تضم دجاجاً، بطاً، وأرانب:\n\
-         • الفرق بين عدد البط والدجاج هو {}.\n\
+         • عدد الدجاج يزيد عن عدد البط بمقدار {}.\n\
          • مجموع عدد الدجاج والأرانب يساوي {}.\n\
          • إجمالي عدد الأرجل لكل الحيوانات هو {} رجلاً.\n\
          فما هو عدد كل حيوان بدقة؟",
