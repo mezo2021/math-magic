@@ -7,18 +7,21 @@ export default function MathGame() {
   const [wasm, setWasm] = useState<any>(null);
   const [screen, setScreen] = useState('menu');
   const [puzzle, setPuzzle] = useState<any>(null);
+  
   const [score, setScore] = useState(0);
   const [selectedAnswer, setSelectedAnswer] = useState<any>(null);
   const [isAnswered, setIsAnswered] = useState(false);
   const [inputAnswers, setInputAnswers] = useState<any>({});
 
-  // تحميل محرك WASM بطريقة احترافية
   useEffect(() => {
     async function loadWasm() {
       try {
-        // استخدام webpackIgnore يمنع أخطاء البناء، ويجعل المتصفح يحمله مباشرة
-        const module = await import(/* webpackIgnore: true */ '/math_engine.js');
-        await module.default(); 
+        const basePath = process.env.NEXT_PUBLIC_BASE_PATH || '';
+        
+        // السطر السحري الذي يمنع Next.js من الانهيار
+        const module = await import(/* webpackIgnore: true */ `${basePath}/math_engine.js`);
+        await module.default({ module_or_path: `${basePath}/math_engine_bg.wasm` });
+        
         setWasm(module);
         setIsWasmReady(true);
       } catch (e) {
@@ -26,10 +29,14 @@ export default function MathGame() {
       }
     }
     loadWasm();
+    
+    const savedScore = localStorage.getItem('math_magic_score');
+    if (savedScore) setScore(parseInt(savedScore));
   }, []);
 
   const startGame = () => {
     setScore(0);
+    localStorage.setItem('math_magic_score', '0');
     setScreen('puzzle');
     generateNewPuzzle();
   };
@@ -54,12 +61,15 @@ export default function MathGame() {
     } else {
       isCorrect = String(answer) === String(puzzle.correct_answer);
     }
-    if (isCorrect) setScore(score + 10);
+    if (isCorrect) {
+      const newScore = score + 10;
+      setScore(newScore);
+      localStorage.setItem('math_magic_score', newScore.toString());
+    }
   };
 
   if (!isWasmReady) return <div className="min-h-screen flex items-center justify-center text-white">جاري تشغيل محرك Rust... ⚙️</div>;
 
-  // --- شاشة القائمة الرئيسية ---
   if (screen === 'menu') {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center p-6 text-white">
@@ -70,28 +80,11 @@ export default function MathGame() {
         <button onClick={startGame} className="w-full max-w-md bg-slate-800 hover:bg-slate-700 border border-slate-600 p-6 rounded-2xl flex items-center justify-center gap-4 transition-all shadow-lg text-xl font-bold">
           <span className="text-3xl">🧠</span> ابدأ التحدي
         </button>
+        {score > 0 && <p className="mt-8 text-yellow-400">أفضل نتيجة لك: {score} 🏆</p>}
       </div>
     );
   }
 
-  // --- شاشة نهاية اللعبة ---
-  if (screen === 'end') {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center p-6 text-white text-center">
-        <span className="text-6xl mb-4">🎉</span>
-        <h1 className="text-4xl font-bold mb-4">أحسنت!</h1>
-        <div className="bg-slate-800 p-8 rounded-2xl border border-slate-600 mb-8">
-          <p className="text-slate-400 mb-2">مجموع نقاطك</p>
-          <p className="text-5xl font-black text-yellow-400">{score}</p>
-        </div>
-        <button onClick={() => setScreen('menu')} className="bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-8 rounded-xl">
-          العودة للقائمة 🔄
-        </button>
-      </div>
-    );
-  }
-
-  // --- شاشة اللغز ---
   return (
     <div className="min-h-screen flex flex-col text-white">
       <header className="flex justify-between items-center p-4 bg-slate-800 shadow-md">
