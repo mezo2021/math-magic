@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 // استدعاء محرك Rust الذي تم بناؤه في السحابة
 // @ts-ignore
-import init, { generate_animal_puzzle, generate_sequence_puzzle } from '../../pkg/math_engine.js';
+import init, { generate_animal_puzzle, generate_sequence_puzzle } from '../../../pkg/math_engine.js';
 
 export default function MathGame() {
   const [isWasmReady, setIsWasmReady] = useState(false);
@@ -65,7 +65,7 @@ export default function MathGame() {
     }
   };
 
-  if (!isWasmReady) return <div className="min-h-screen flex items-center justify-center">جاري تشغيل محرك Rust... ⚙️</div>;
+  if (!isWasmReady) return <div className="min-h-screen flex items-center justify-center text-white">جاري تشغيل محرك Rust... ⚙️</div>;
 
   // --- شاشة القائمة الرئيسية ---
   if (screen === 'menu') {
