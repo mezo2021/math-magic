@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { parseChallengeToken, ChallengeData } from '@/lib/challenge';
-import { loadMathEngine } from '@/lib/wasm-loader';
+import { generatePuzzle, validateAnswer, Puzzle } from '@/lib/puzzleEngine';
 import ChallengeShare from '@/components/ChallengeShare';
 import { usePlayerStore } from '@/lib/usePlayerStore';
 import { ALL_ACHIEVEMENTS } from '@/lib/store';
@@ -24,11 +24,8 @@ export default function MathGame() {
   const { player, updatePlayer } = usePlayerStore();
   
   const [isMounted, setIsMounted] = useState(false);
-  const [isWasmReady, setIsWasmReady] = useState(false);
-  const [wasmError, setWasmError] = useState(false);
-  const [wasm, setWasm] = useState<any>(null);
   const [screen, setScreen] = useState('menu');
-  const [puzzle, setPuzzle] = useState<any>(null);
+  const [puzzle, setPuzzle] = useState<Puzzle | null>(null);
   const [seed, setSeed] = useState<number>(0);
   
   const [currentRoundScore, setCurrentRoundScore] = useState(0);
@@ -41,25 +38,11 @@ export default function MathGame() {
   const [isAnswered, setIsAnswered] = useState(false);
   const [isCorrect, setIsCorrect] = useState(false);
   
-  const [generationError, setGenerationError] = useState<string | null>(null);
-
   const [activeChallenge, setActiveChallenge] = useState<ChallengeData | null>(null);
   const [toastAchievement, setToastAchievement] = useState<string | null>(null);
 
   useEffect(() => {
     setIsMounted(true);
-    async function initEngine() {
-      try {
-        const module = await loadMathEngine();
-        setWasm(module);
-        setIsWasmReady(true);
-      } catch (e: any) {
-        setWasmError(true);
-        console.error("WASM Load Error:", e);
-      }
-    }
-    initEngine();
-    
     const urlParams = new URLSearchParams(window.location.search);
     const challengeToken = urlParams.get('challenge');
     if (challengeToken) {
@@ -70,7 +53,7 @@ export default function MathGame() {
 
   if (!isMounted || !player) return <div className="min-h-screen bg-slate-900 flex items-center justify-center text-white">جاري التحميل... ⏳</div>;
 
-  const lang = player.preferences?.language || 'ar';
+  const lang = (player.preferences?.language || 'ar') as 'ar' | 'en';
   const t = translations[lang] || translations['ar'];
   const isBarbie = player.preferences?.theme === 'barbie';
   const isRTL = lang === 'ar';
@@ -84,34 +67,15 @@ export default function MathGame() {
   };
 
   const generateNewPuzzle = () => {
-    if (!isWasmReady || !wasm) return;
-    setGenerationError(null); 
-    
-    try {
-      if (typeof wasm.generate_puzzle !== 'function') {
-        throw new Error("الدالة generate_puzzle غير موجودة في ملف الـ WASM.");
-      }
-
-      const newSeed = Math.floor(Math.random() * 1000000);
-      
-      // 🆕 تحويل الـ Seed إلى BigInt هنا
-      const newPuzzle = wasm.generate_puzzle(BigInt(newSeed)); 
-      
-      if (!newPuzzle) {
-        throw new Error("المحرك أعاد قيمة فارغة (null/undefined).");
-      }
-
-      setSeed(newSeed);
-      setPuzzle(newPuzzle);
-      setInputAnswers({});
-      setSelectedChoice(null);
-      setSingleInput('');
-      setIsAnswered(false);
-      setIsCorrect(false);
-    } catch (error: any) {
-      console.error("🚨 WASM Generation Error:", error);
-      setGenerationError(error.message || String(error));
-    }
+    const newSeed = Math.floor(Math.random() * 1000000);
+    setSeed(newSeed);
+    const newPuzzle = generatePuzzle(newSeed);
+    setPuzzle(newPuzzle);
+    setInputAnswers({});
+    setSelectedChoice(null);
+    setSingleInput('');
+    setIsAnswered(false);
+    setIsCorrect(false);
   };
 
   const startGame = () => {
@@ -134,8 +98,7 @@ export default function MathGame() {
       answerPayload = { value: Number(singleInput) };
     }
 
-    // 🆕 تحويل الـ Seed إلى BigInt هنا أيضاً
-    const correct = wasm.validate_answer(BigInt(seed), answerPayload);
+    const correct = validateAnswer(seed, answerPayload);
     setIsCorrect(correct);
 
     const pointsEarned = correct ? 10 : 0;
@@ -190,30 +153,24 @@ export default function MathGame() {
 
   const renderPuzzleText = () => {
     if (!puzzle || !puzzle.params) return "";
+    
     if (puzzle.puzzle_type === 'farm') {
-      return t.farm_template(puzzle.params.missing || 0);
-    } else if (puzzle.puzzle_type === 'distance') {
-      return t.distance_template(puzzle.params.distance || 0);
-    } else if (puzzle.puzzle_type === 'sequence') {
-      return t.sequence_template((puzzle.params.seq || []).join(" , "));
+      return lang === 'ar' 
+        ? `في المزرعة، مجموع الرؤوس ${puzzle.params.totalHeads} والأرجل ${puzzle.params.totalLegs}.\nكم عدد الدجاج، البط، والأرانب؟`
+        : `In the farm, total heads: ${puzzle.params.totalHeads}, total legs: ${puzzle.params.totalLegs}.\nHow many chickens, ducks, and rabbits?`;
+    } 
+    if (puzzle.puzzle_type === 'distance') {
+      return lang === 'ar'
+        ? `سيارة تسير بسرعة ${puzzle.params.distance} كم/س.\nما هي المسافة التي تقطعها في ساعتين؟`
+        : `A car travels at ${puzzle.params.distance} km/h.\nWhat distance does it cover in 2 hours?`;
+    } 
+    if (puzzle.puzzle_type === 'sequence') {
+      return lang === 'ar'
+        ? `أكمل المتتالية:\n${puzzle.params.seq.join(' , ')} , ?`
+        : `Complete the sequence:\n${puzzle.params.seq.join(' , ')} , ?`;
     }
     return "";
   };
-
-  if (wasmError) return (
-    <div className={`min-h-screen flex flex-col items-center justify-center ${themeStyles.bg} p-6 text-center`} dir={isRTL ? 'rtl' : 'ltr'}>
-      <div className="text-6xl mb-4">⚠️</div>
-      <h1 className="text-2xl font-bold mb-4">{lang === 'ar' ? 'تعذر تشغيل محرك الألغاز' : 'Failed to load puzzle engine'}</h1>
-      <button onClick={() => window.location.reload()} className={`${themeStyles.primaryBtn} px-6 py-3 rounded-xl font-bold`}>{lang === 'ar' ? 'إعادة المحاولة 🔄' : 'Retry 🔄'}</button>
-    </div>
-  );
-
-  if (!isWasmReady) return (
-    <div className={`min-h-screen flex flex-col items-center justify-center ${themeStyles.bg}`} dir={isRTL ? 'rtl' : 'ltr'}>
-      <div className="text-6xl mb-6 animate-bounce">⚙️</div>
-      <div className={`text-2xl font-bold mb-2 ${themeStyles.accentText}`}>{lang === 'ar' ? 'جاري تشغيل محرك Rust...' : 'Loading Rust Engine...'}</div>
-    </div>
-  );
 
   if (screen === 'menu') {
     return (
@@ -274,33 +231,6 @@ export default function MathGame() {
         </div>
       </div>
     );
-  }
-
-  if (screen === 'puzzle' && !puzzle) {
-    if (generationError) {
-      return (
-        <div className={`min-h-screen flex flex-col items-center justify-center ${themeStyles.bg} p-6 text-center`} dir={isRTL ? 'rtl' : 'ltr'}>
-          <div className="text-6xl mb-4">💥</div>
-          <h1 className="text-2xl font-bold mb-4">{lang === 'ar' ? 'فشل توليد اللغز' : 'Puzzle generation failed'}</h1>
-          
-          <div className="bg-black/50 border border-red-500/50 p-4 rounded-xl mb-6 w-full max-w-md overflow-auto text-left" dir="ltr">
-            <code className="text-red-400 font-mono text-sm break-words">
-              {generationError}
-            </code>
-          </div>
-
-          <div className="flex gap-4">
-            <button onClick={generateNewPuzzle} className={`${themeStyles.primaryBtn} px-6 py-3 rounded-xl font-bold`}>
-              {lang === 'ar' ? 'إعادة المحاولة 🔄' : 'Retry 🔄'}
-            </button>
-            <button onClick={() => setScreen('menu')} className={`bg-slate-700 hover:bg-slate-600 text-white px-6 py-3 rounded-xl font-bold`}>
-              {lang === 'ar' ? 'القائمة الرئيسية' : 'Main Menu'}
-            </button>
-          </div>
-        </div>
-      );
-    }
-    return <div className={`min-h-screen flex items-center justify-center ${themeStyles.bg}`}>{lang === 'ar' ? 'جاري توليد اللغز... ⏳' : 'Generating puzzle... ⏳'}</div>;
   }
 
   if (screen === 'end') {
