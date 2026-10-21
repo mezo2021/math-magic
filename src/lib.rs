@@ -2,7 +2,6 @@ use wasm_bindgen::prelude::*;
 use serde::{Serialize, Deserialize};
 use rand::Rng;
 
-// تعريف هيكل اللغز
 #[derive(Serialize, Deserialize)]
 pub struct PuzzleConfig {
     pub inputs: Vec<InputConfig>,
@@ -28,26 +27,24 @@ pub struct Puzzle {
     pub explanation: String,
 }
 
-// 1. مولد لغز مزرعة الحيوانات (التوليد العكسي)
+// 1. مولد لغز مزرعة الحيوانات (توليد عكسي مُحصّن ضد التناقض)
 #[wasm_bindgen]
 pub fn generate_animal_puzzle() -> JsValue {
     let mut rng = rand::thread_rng();
 
-    // التوليد العكسي: البدء بالإجابة الصحيحة أولاً
-    let chickens: u32 = rng.gen_range(2..=7);
-    let mut ducks: u32 = rng.gen_range(2..=7);
+    // التوليد العكسي الآمن: نختار الدجاج أولاً (من 4 إلى 8)
+    let chickens: u32 = rng.gen_range(4..=8);
+    
+    // نجبر البط على أن يكون أقل من الدجاج (من 1 إلى الدجاج - 1)
+    let ducks: u32 = rng.gen_range(1..chickens);
+    
     let rabbits: u32 = rng.gen_range(1..=4);
 
-    // إصلاح هندسي: إجبار المحرك على اختيار أرقام مختلفة حتى لا يكون الفرق صفراً
-    while ducks == chickens {
-        ducks = rng.gen_range(2..=7);
-    }
-
-    let total_legs = (chickens * 2) + (ducks * 2) + (rabbits * 4);
-    let diff_duck_chicken = (chickens as i32 - ducks as i32).abs();
+    // الآن الفرق سيكون موجباً دائماً، والنص سيطابق الواقع
+    let diff_duck_chicken = chickens - ducks; 
     let sum_chicken_rabbit = chickens + rabbits;
+    let total_legs = (chickens * 2) + (ducks * 2) + (rabbits * 4);
 
-    // إصلاح لغوي: توضيح الاتجاه بدلاً من كلمة "الفرق" المبهمة
     let prompt = format!(
         "في مزرعة ذكية تضم دجاجاً، بطاً، وأرانب:\n\
          • عدد الدجاج يزيد عن عدد البط بمقدار {}.\n\
@@ -60,7 +57,7 @@ pub fn generate_animal_puzzle() -> JsValue {
     let puzzle = Puzzle {
         id: format!("animal_{}", rng.gen::<u64>()),
         category: "المنطق الجبري".to_string(),
-        title: "لغز المزرعة الذكية (Rust WASM)".to_string(),
+        title: "لغز المزرعة الذكية".to_string(),
         prompt,
         interaction_type: "multi_input".to_string(),
         config: PuzzleConfig {
@@ -76,7 +73,7 @@ pub fn generate_animal_puzzle() -> JsValue {
             "rabbits": rabbits
         }),
         explanation: format!(
-            "الحل: الدجاج = {}، البط = {}، الأرانب = {}.\n\
+            "الحل الصحيح الوحيد: الدجاج = {}، البط = {}، الأرانب = {}.\n\
              التحقق: ({}×2) + ({}×2) + ({}×4) = {} رجلاً.",
             chickens, ducks, rabbits, chickens, ducks, rabbits, total_legs
         ),
@@ -85,7 +82,7 @@ pub fn generate_animal_puzzle() -> JsValue {
     serde_wasm_bindgen::to_value(&puzzle).unwrap()
 }
 
-// 2. مولد لغز السلاسل العددية
+// 2. مولد لغز السلاسل العددية (كما هو)
 #[wasm_bindgen]
 pub fn generate_sequence_puzzle() -> JsValue {
     let mut rng = rand::thread_rng();
@@ -111,7 +108,7 @@ pub fn generate_sequence_puzzle() -> JsValue {
     let puzzle = Puzzle {
         id: format!("seq_{}", rng.gen::<u64>()),
         category: "الذكاء العددي".to_string(),
-        title: "سلسلة الأرقام (Rust WASM)".to_string(),
+        title: "سلسلة الأرقام".to_string(),
         prompt,
         interaction_type: "single_input".to_string(),
         config: PuzzleConfig { inputs: vec![] },
