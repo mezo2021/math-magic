@@ -2,7 +2,43 @@
 
 export type Language = 'ar' | 'en';
 
-export const translations = {
+export interface TranslationSchema {
+  appTitle: string;
+  highestScore: string;
+  enterName: string;
+  startChallenge: string;
+  acceptChallenge: string;
+  achievements: string;
+  newAchievement: string;
+  question: string;
+  checkAnswer: string;
+  correctAnswer: string;
+  wrongAnswer: string;
+  nextQuestion: string;
+  sessionScore: string;
+  backToMenu: string;
+  congrats: string;
+  completedSession: string;
+  theme: string;
+  language: string;
+  
+  farm_template: (missing: number) => string;
+  distance_template: (distance: number) => string;
+  sequence_template: (seq: string) => string;
+
+  // دوال الحلول الجديدة
+  solution_farm: (rabbits: number) => string;
+  solution_distance: (distance: number) => string;
+  solution_sequence: (value: number) => string;
+
+  chickens: string;
+  ducks: string;
+  rabbits: string;
+  km: string;
+  zero: string;
+}
+
+export const translations: Record<Language, TranslationSchema> = {
   ar: {
     appTitle: "سحر الرياضيات",
     highestScore: "أعلى نتيجة مسجلة:",
@@ -23,7 +59,6 @@ export const translations = {
     theme: "الثيم",
     language: "اللغة",
 
-    // قوالب الألغاز كدوال تفاعلية
     farm_template: (missing: number) => 
       `في مزرعة ذكية تضم دجاجاً، بطاً، وأرانب:\n• عدد البط = نصف عدد الدجاج.\n• عدد الأرانب = ربع عدد البط.\n• مجموع عدد الأرانب والبط = عدد الدجاج ناقصاً منه ${missing} دجاجات.\nفما هو عدد كل حيوان بدقة؟`,
     
@@ -32,6 +67,15 @@ export const translations = {
     
     sequence_template: (seq: string) => 
       `اكتشف النمط الرياضي وأوجد الرقم المفقود:\n${seq} ، ؟`,
+
+    solution_farm: (rabbits: number) => 
+      `الحل: الأرانب = ${rabbits}، إذن البط = ${rabbits * 4}، والدجاج = ${rabbits * 8}. (تحقق: ${rabbits} + ${rabbits * 4} = ${rabbits * 8} - ${rabbits * 3}).`,
+
+    solution_distance: (distance: number) => 
+      `الحل: الفخ هنا! السؤال يسأل عن "المسافة الثابتة" وليس المسافة المقطوعة. المسافة الثابتة هي ${distance} كم.`,
+
+    solution_sequence: (value: number) => 
+      `الحل: النمط هو إضافة رقم ثابت في كل مرة. الرقم المفقود هو ${value}.`,
 
     chickens: "الدجاج 🐔",
     ducks: "البط 🦆",
@@ -60,7 +104,6 @@ export const translations = {
     theme: "Theme",
     language: "Language",
 
-    // Puzzle Templates
     farm_template: (missing: number) => 
       `In a smart farm with chickens, ducks, and rabbits:\n• Ducks = half of chickens.\n• Rabbits = quarter of ducks.\n• Sum of rabbits and ducks = Chickens minus ${missing} chickens.\nWhat is the exact number of each animal?`,
     
@@ -69,6 +112,15 @@ export const translations = {
     
     sequence_template: (seq: string) => 
       `Find the pattern and the missing number:\n${seq} , ?`,
+
+    solution_farm: (rabbits: number) => 
+      `Solution: Rabbits = ${rabbits}, so Ducks = ${rabbits * 4}, and Chickens = ${rabbits * 8}. (Check: ${rabbits} + ${rabbits * 4} = ${rabbits * 8} - ${rabbits * 3}).`,
+
+    solution_distance: (distance: number) => 
+      `Solution: Trick question! The fixed distance between the cities doesn't change. It remains ${distance} km.`,
+
+    solution_sequence: (value: number) => 
+      `Solution: The pattern is adding a constant number. The missing number is ${value}.`,
 
     chickens: "Chickens 🐔",
     ducks: "Ducks 🦆",
