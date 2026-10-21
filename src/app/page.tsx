@@ -1,24 +1,25 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-// استدعاء محرك Rust الذي تم بناؤه في السحابة
-// @ts-ignore
-import init, { generate_animal_puzzle, generate_sequence_puzzle } from '../../../pkg/math_engine.js';
 
 export default function MathGame() {
   const [isWasmReady, setIsWasmReady] = useState(false);
-  const [screen, setScreen] = useState('menu'); // menu, puzzle, end
+  const [wasm, setWasm] = useState<any>(null);
+  const [screen, setScreen] = useState('menu');
   const [puzzle, setPuzzle] = useState<any>(null);
   const [score, setScore] = useState(0);
   const [selectedAnswer, setSelectedAnswer] = useState<any>(null);
   const [isAnswered, setIsAnswered] = useState(false);
   const [inputAnswers, setInputAnswers] = useState<any>({});
 
-  // 1. تهيئة محرك Rust عند فتح التطبيق
+  // تحميل محرك WASM من مجلد public
   useEffect(() => {
     async function loadWasm() {
       try {
-        await init();
+        // استيراد الملف من المجلد العام
+        const module = await import('/math_engine.js');
+        await module.default(); // تهيئة WASM
+        setWasm(module);
         setIsWasmReady(true);
       } catch (e) {
         console.error("فشل تحميل محرك Rust", e);
@@ -27,7 +28,6 @@ export default function MathGame() {
     loadWasm();
   }, []);
 
-  // 2. دالة توليد لغز جديد
   const startGame = () => {
     setScore(0);
     setScreen('puzzle');
@@ -35,38 +35,31 @@ export default function MathGame() {
   };
 
   const generateNewPuzzle = () => {
-    if (!isWasmReady) return;
-    
-    // اختيار عشوائي بين مولد المزرعة ومولد السلاسل
+    if (!isWasmReady || !wasm) return;
     const randomType = Math.random() > 0.5 ? 'animal' : 'sequence';
-    const newPuzzle = randomType === 'animal' ? generate_animal_puzzle() : generate_sequence_puzzle();
-    
+    const newPuzzle = randomType === 'animal' ? wasm.generate_animal_puzzle() : wasm.generate_sequence_puzzle();
     setPuzzle(newPuzzle);
     setSelectedAnswer(null);
     setInputAnswers({});
     setIsAnswered(false);
   };
 
-  // 3. التحقق من الإجابة
   const checkAnswer = (answer: any) => {
     if (isAnswered) return;
     setSelectedAnswer(answer);
     setIsAnswered(true);
-
     let isCorrect = false;
     if (puzzle.interaction_type === 'multi_input') {
       isCorrect = JSON.stringify(answer) === JSON.stringify(puzzle.correct_answer);
     } else {
       isCorrect = String(answer) === String(puzzle.correct_answer);
     }
-
-    if (isCorrect) {
-      setScore(score + 10);
-    }
+    if (isCorrect) setScore(score + 10);
   };
 
   if (!isWasmReady) return <div className="min-h-screen flex items-center justify-center text-white">جاري تشغيل محرك Rust... ⚙️</div>;
 
+  // ... (باقي كود الواجهة كما هو تماماً بدون أي تغيير) ...
   // --- شاشة القائمة الرئيسية ---
   if (screen === 'menu') {
     return (
@@ -114,7 +107,6 @@ export default function MathGame() {
           <p className="text-slate-300 mb-6 whitespace-pre-line text-center leading-relaxed">{puzzle.prompt}</p>
         </div>
 
-        {/* إذا كان اللغز إدخال متعدد (مزرعة) */}
         {puzzle.interaction_type === 'multi_input' && (
           <div className="w-full space-y-4">
             {puzzle.config.inputs.map((input: any) => (
@@ -139,7 +131,6 @@ export default function MathGame() {
           </div>
         )}
 
-        {/* إذا كان اللغز إدخال مفرد (سلسلة عددية) */}
         {puzzle.interaction_type === 'single_input' && !isAnswered && (
            <div className="w-full flex flex-col items-center gap-4">
              <input
@@ -155,7 +146,6 @@ export default function MathGame() {
            </div>
         )}
 
-        {/* عرض التفسير والنتيجة */}
         {isAnswered && (
           <div className="w-full mt-6">
             <div className={`p-4 rounded-xl border mb-4 text-center bg-slate-800 border-slate-600`}>
