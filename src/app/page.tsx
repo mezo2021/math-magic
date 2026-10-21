@@ -41,6 +41,9 @@ export default function MathGame() {
   const [isAnswered, setIsAnswered] = useState(false);
   const [isCorrect, setIsCorrect] = useState(false);
   
+  // 🆕 حالة جديدة لاصطياد فشل توليد اللغز
+  const [generationError, setGenerationError] = useState(false);
+
   const [activeChallenge, setActiveChallenge] = useState<ChallengeData | null>(null);
   const [toastAchievement, setToastAchievement] = useState<string | null>(null);
 
@@ -83,15 +86,28 @@ export default function MathGame() {
 
   const generateNewPuzzle = () => {
     if (!isWasmReady || !wasm) return;
-    const newSeed = Math.floor(Math.random() * 1000000);
-    setSeed(newSeed);
-    const newPuzzle = wasm.generate_puzzle(newSeed); 
-    setPuzzle(newPuzzle);
-    setInputAnswers({});
-    setSelectedChoice(null);
-    setSingleInput('');
-    setIsAnswered(false);
-    setIsCorrect(false);
+    setGenerationError(false); // تصفير حالة الخطأ
+    
+    try {
+      const newSeed = Math.floor(Math.random() * 1000000);
+      setSeed(newSeed);
+      const newPuzzle = wasm.generate_puzzle(newSeed); 
+      
+      // التحقق من أن المحرك أعاد لغزاً صالحاً
+      if (!newPuzzle) {
+        throw new Error("WASM returned an invalid puzzle.");
+      }
+
+      setPuzzle(newPuzzle);
+      setInputAnswers({});
+      setSelectedChoice(null);
+      setSingleInput('');
+      setIsAnswered(false);
+      setIsCorrect(false);
+    } catch (error) {
+      console.error("🚨 WASM Generation Error:", error);
+      setGenerationError(true); // إظهار شاشة الخطأ بدلاً من التعليق
+    }
   };
 
   const startGame = () => {
@@ -255,9 +271,30 @@ export default function MathGame() {
     );
   }
 
-  // 🛡️ حماية شاشة اللغز من الانهيار إذا لم يتم توليد اللغز بعد
+  // 🛡️ حماية شاشة اللغز من الانهيار أو التعليق الأبدي
   if (screen === 'puzzle' && !puzzle) {
-    return <div className={`min-h-screen flex items-center justify-center ${themeStyles.bg}`}>جاري توليد اللغز... ⏳</div>;
+    if (generationError) {
+      return (
+        <div className={`min-h-screen flex flex-col items-center justify-center ${themeStyles.bg} p-6 text-center`} dir={isRTL ? 'rtl' : 'ltr'}>
+          <div className="text-6xl mb-4">💥</div>
+          <h1 className="text-2xl font-bold mb-4">{lang === 'ar' ? 'فشل توليد اللغز' : 'Puzzle generation failed'}</h1>
+          <p className="text-slate-400 mb-6 max-w-sm">
+            {lang === 'ar' 
+              ? 'حدث خطأ داخلي في محرك Rust (قد يكون WASM قديماً أو هناك حلقة لا نهائية). يرجى إعادة المحاولة أو العودة للقائمة.' 
+              : 'WASM engine error (outdated build or infinite loop). Please retry or go back.'}
+          </p>
+          <div className="flex gap-4">
+            <button onClick={generateNewPuzzle} className={`${themeStyles.primaryBtn} px-6 py-3 rounded-xl font-bold`}>
+              {lang === 'ar' ? 'إعادة المحاولة 🔄' : 'Retry 🔄'}
+            </button>
+            <button onClick={() => setScreen('menu')} className={`bg-slate-700 hover:bg-slate-600 text-white px-6 py-3 rounded-xl font-bold`}>
+              {lang === 'ar' ? 'القائمة الرئيسية' : 'Main Menu'}
+            </button>
+          </div>
+        </div>
+      );
+    }
+    return <div className={`min-h-screen flex items-center justify-center ${themeStyles.bg}`}>{lang === 'ar' ? 'جاري توليد اللغز... ⏳' : 'Generating puzzle... ⏳'}</div>;
   }
 
   if (screen === 'end') {
