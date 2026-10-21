@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react'; // <--- هذا السطر كان مفقوداً
+import { useState, useEffect } from 'react';
 
 export default function MathGame() {
   const [isWasmReady, setIsWasmReady] = useState(false);
@@ -12,6 +12,7 @@ export default function MathGame() {
   const [selectedAnswer, setSelectedAnswer] = useState<any>(null);
   const [isAnswered, setIsAnswered] = useState(false);
   const [inputAnswers, setInputAnswers] = useState<any>({});
+  const [isCorrect, setIsCorrect] = useState(false);
 
   useEffect(() => {
     async function loadWasm() {
@@ -46,27 +47,53 @@ export default function MathGame() {
     setSelectedAnswer(null);
     setInputAnswers({});
     setIsAnswered(false);
+    setIsCorrect(false);
   };
 
   const checkAnswer = (answer: any) => {
     if (isAnswered) return;
     setSelectedAnswer(answer);
     setIsAnswered(true);
-    let isCorrect = false;
+
+    let correct = false;
+
     if (puzzle.interaction_type === 'multi_input') {
-      isCorrect = JSON.stringify(answer) === JSON.stringify(puzzle.correct_answer);
+      // التحقق الذكي: هل إجابة المستخدم تحقق نفس مجموع الأرجل؟
+      const userLegs = (parseInt(answer.chickens) * 2) + (parseInt(answer.ducks) * 2) + (parseInt(answer.rabbits) * 4);
+      const correctLegs = (puzzle.correct_answer.chickens * 2) + (puzzle.correct_answer.ducks * 2) + (puzzle.correct_answer.rabbits * 4);
+      
+      // إذا كان مجموع الأرجل متطابقاً ومجموع الدجاج والأرانب متطابقاً، فالإجابة صحيحة رياضياً
+      const userSum = parseInt(answer.chickens) + parseInt(answer.rabbits);
+      const correctSum = puzzle.correct_answer.chickens + puzzle.correct_answer.rabbits;
+
+      if (userLegs === correctLegs && userSum === correctSum) {
+        correct = true;
+      }
     } else {
-      isCorrect = String(answer) === String(puzzle.correct_answer);
+      correct = String(answer) === String(puzzle.correct_answer);
     }
-    if (isCorrect) {
+
+    setIsCorrect(correct);
+
+    if (correct) {
       const newScore = score + 10;
       setScore(newScore);
       localStorage.setItem('math_magic_score', newScore.toString());
     }
   };
 
-  if (!isWasmReady) return <div className="min-h-screen flex items-center justify-center text-white bg-slate-900">جاري تشغيل محرك Rust... ⚙️</div>;
+  // --- شاشة التحميل الأنيقة ---
+  if (!isWasmReady) return (
+    <div className="min-h-screen flex flex-col items-center justify-center text-white bg-slate-900">
+      <div className="text-6xl mb-6 animate-bounce">⚙️</div>
+      <div className="text-2xl font-bold mb-2 text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-500">
+        جاري تشغيل محرك Rust...
+      </div>
+      <p className="text-slate-400 text-sm animate-pulse">يتم تحميل الألغاز لأول مرة (يعمل بعدها بدون إنترنت)</p>
+    </div>
+  );
 
+  // --- شاشة القائمة الرئيسية ---
   if (screen === 'menu') {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center p-6 text-white bg-slate-900">
@@ -82,6 +109,7 @@ export default function MathGame() {
     );
   }
 
+  // --- شاشة اللغز ---
   return (
     <div className="min-h-screen flex flex-col text-white bg-slate-900">
       <header className="flex justify-between items-center p-4 bg-slate-800 shadow-md">
@@ -137,8 +165,10 @@ export default function MathGame() {
 
         {isAnswered && (
           <div className="w-full mt-6">
-            <div className={`p-4 rounded-xl border mb-4 text-center bg-slate-800 border-slate-600`}>
-              <span className="font-bold block mb-2 text-blue-400">النتيجة والتفسير:</span>
+            <div className={`p-4 rounded-xl border mb-4 text-center ${isCorrect ? 'bg-green-900/30 border-green-700' : 'bg-red-900/30 border-red-700'}`}>
+              <span className={`font-bold block mb-2 ${isCorrect ? 'text-green-400' : 'text-red-400'}`}>
+                {isCorrect ? 'إجابة صحيحة! 🎉 (+10)' : 'إجابة خاطئة ⏳'}
+              </span>
               <p className="text-slate-300 text-sm whitespace-pre-line">{puzzle.explanation}</p>
             </div>
             <button onClick={generateNewPuzzle} className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white font-bold py-3 rounded-xl">
