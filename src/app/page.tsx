@@ -1,25 +1,32 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { parseChallengeToken, ChallengeData } from '@/lib/challenge';
+import ChallengeShare from '@/components/ChallengeShare';
 
 export default function MathGame() {
   const [isWasmReady, setIsWasmReady] = useState(false);
   const [wasm, setWasm] = useState<any>(null);
-  const [screen, setScreen] = useState('menu');
+  const [screen, setScreen] = useState('menu'); // menu, puzzle, end
   const [puzzle, setPuzzle] = useState<any>(null);
+  const [seed, setSeed] = useState<number>(0);
   
   const [score, setScore] = useState(0);
-  const [selectedAnswer, setSelectedAnswer] = useState<any>(null);
-  const [isAnswered, setIsAnswered] = useState(false);
+  const [questionsAnswered, setQuestionsAnswered] = useState(0);
   const [inputAnswers, setInputAnswers] = useState<any>({});
+  const [isAnswered, setIsAnswered] = useState(false);
   const [isCorrect, setIsCorrect] = useState(false);
+  
+  // حالة التحدي
+  const [activeChallenge, setActiveChallenge] = useState<ChallengeData | null>(null);
+  const [playerName, setPlayerName] = useState("لاعب مجهول");
 
   useEffect(() => {
+    // 1. تحميل WASM
     async function loadWasm() {
       try {
         const module = await import(/* webpackIgnore: true */ '/math-magic/math_engine.js');
         await module.default('/math-magic/math_engine_bg.wasm');
-        
         setWasm(module);
         setIsWasmReady(true);
       } catch (e) {
@@ -28,23 +35,33 @@ export default function MathGame() {
     }
     loadWasm();
     
+    // 2. قراءة التحدي من الـ URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const challengeToken = urlParams.get('challenge');
+    if (challengeToken) {
+      const challengeData = parseChallengeToken(challengeToken);
+      if (challengeData) setActiveChallenge(challengeData);
+    }
+
+    // 3. استرجاع أفضل نتيجة (محلياً)
     const savedScore = localStorage.getItem('math_magic_score');
     if (savedScore) setScore(parseInt(savedScore));
   }, []);
 
   const startGame = () => {
     setScore(0);
-    localStorage.setItem('math_magic_score', '0');
+    setQuestionsAnswered(0);
     setScreen('puzzle');
     generateNewPuzzle();
   };
 
   const generateNewPuzzle = () => {
     if (!isWasmReady || !wasm) return;
-    const randomType = Math.random() > 0.5 ? 'animal' : 'sequence';
-    const newPuzzle = randomType === 'animal' ? wasm.generate_animal_puzzle() : wasm.generate_sequence_puzzle();
+    const newSeed = Math.floor(Math.random() * 1000000);
+    setSeed(newSeed);
+    // توليد اللغز (مزرعة فقط في هذا المثال لتبسيط الواجهة)
+    const newPuzzle = wasm.generate_puzzle(newSeed); 
     setPuzzle(newPuzzle);
-    setSelectedAnswer(null);
     setInputAnswers({});
     setIsAnswered(false);
     setIsCorrect(false);
@@ -52,50 +69,31 @@ export default function MathGame() {
 
   const checkAnswer = (answer: any) => {
     if (isAnswered) return;
-    setSelectedAnswer(answer);
     setIsAnswered(true);
 
-    let correct = false;
-
-    if (puzzle.interaction_type === 'multi_input') {
-      // التطبيع الدقيق (Normalization): تحويل إجابات المستخدم إلى أرقام
-      const uChickens = Number(answer.chickens);
-      const uDucks = Number(answer.ducks);
-      const uRabbits = Number(answer.rabbits);
-
-      // تحويل إجابة Rust إلى أرقام
-      const cChickens = Number(puzzle.correct_answer.chickens);
-      const cDucks = Number(puzzle.correct_answer.ducks);
-      const cRabbits = Number(puzzle.correct_answer.rabbits);
-
-      // مقارنة صارمة ومباشرة (Exact Match)
-      if (uChickens === cChickens && uDucks === cDucks && uRabbits === cRabbits) {
-        correct = true;
-      }
-    } else {
-      // مقارنة صارمة للسلاسل العددية
-      correct = Number(answer) === Number(puzzle.correct_answer);
-    }
-
+    const correct = wasm.validate_answer(seed, answer);
     setIsCorrect(correct);
 
     if (correct) {
-      const newScore = score + 10;
-      setScore(newScore);
-      localStorage.setItem('math_magic_score', newScore.toString());
+      setScore(prev => prev + 10);
     }
+    
+    // الانتقال للغز التالي أو النهاية بعد تأخير بسيط
+    setTimeout(() => {
+      if (questionsAnswered + 1 >= 5) {
+        // انتهت الجلسة
+        setScreen('end');
+        // حفظ أفضل نتيجة
+        const currentBest = parseInt(localStorage.getItem('math_magic_score') || '0');
+        if (score + 10 > currentBest) localStorage.setItem('math_magic_score', (score + 10).toString());
+      } else {
+        setQuestionsAnswered(prev => prev + 1);
+        generateNewPuzzle();
+      }
+    }, 2000);
   };
 
-  // --- شاشة التحميل الأنيقة ---
-  if (!isWasmReady) return (
-    <div className="min-h-screen flex flex-col items-center justify-center text-white bg-slate-900">
-      <div className="text-6xl mb-6 animate-bounce">⚙️</div>
-      <div className="text-2xl font-bold mb-2 text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-500">
-        جاري تشغيل محرك Rust...
-      </div>
-      <p className="text-slate-400 text-sm animate-pulse">يتم تحميل الألغاز لأول مرة (يعمل بعدها بدون إنترنت)</p>
-    </div>
-  );
+  if (!isWasmReady) return <div className="min-h-screen flex items-center justify-center text-white bg-slate-900">جاري تشغيل محرك Rust... ⚙️</div>;
 
   // --- شاشة القائمة الرئيسية ---
   if (screen === 'menu') {
@@ -104,11 +102,57 @@ export default function MathGame() {
         <h1 className="text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-500 mb-4 text-center">
           سحر الرياضيات
         </h1>
-        <p className="text-slate-400 mb-12 text-center">تطبيق يعمل بمحرك Rust فائق السرعة 🚀</p>
-        <button onClick={startGame} className="w-full max-w-md bg-slate-800 hover:bg-slate-700 border border-slate-600 p-6 rounded-2xl flex items-center justify-center gap-4 transition-all shadow-lg text-xl font-bold">
-          <span className="text-3xl">🧠</span> ابدأ التحدي
+        <p className="text-slate-400 mb-8 text-center">تطبيق يعمل بمحرك Rust فائق السرعة 🚀</p>
+        
+        {activeChallenge && (
+          <div className="bg-slate-800 border-2 border-yellow-500 p-4 rounded-xl mb-6 text-center shadow-[0_0_15px_rgba(234,179,8,0.3)]">
+            <h3 className="text-xl font-bold text-yellow-400 mb-2">⚔️ أنت في وضع التحدي!</h3>
+            <p className="text-slate-200">تحدي من: <span className="font-bold text-white">{activeChallenge.playerName}</span></p>
+            <p className="text-sm text-slate-300 mt-1">النتيجة المطلوبة: <span className="font-bold text-green-400">{activeChallenge.score + 1} نقطة</span></p>
+          </div>
+        )}
+
+        <input 
+          type="text" 
+          placeholder="أدخل اسمك..." 
+          value={playerName}
+          onChange={(e) => setPlayerName(e.target.value)}
+          className="mb-6 bg-slate-800 border border-slate-600 p-3 rounded-xl text-center w-full max-w-md"
+        />
+
+        <button onClick={startGame} className="w-full max-w-md bg-blue-600 hover:bg-blue-500 p-6 rounded-2xl flex items-center justify-center gap-4 transition-all shadow-lg text-xl font-bold">
+          <span className="text-3xl">🧠</span> {activeChallenge ? 'اقبل التحدي وابدأ' : 'ابدأ التحدي'}
         </button>
-        {score > 0 && <p className="mt-8 text-yellow-400">أفضل نتيجة لك: {score} 🏆</p>}
+      </div>
+    );
+  }
+
+  // --- شاشة نهاية اللعبة ---
+  if (screen === 'end') {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center p-6 text-white bg-slate-900 text-center">
+        <span className="text-6xl mb-4">🎉</span>
+        <h1 className="text-4xl font-bold mb-2">أحسنت يا {playerName}!</h1>
+        <p className="text-xl text-slate-300 mb-8">لقد أكملت الجلسة.</p>
+        
+        <div className="bg-slate-800 p-8 rounded-2xl border border-slate-600 mb-6 w-full max-w-md">
+          <p className="text-slate-400 mb-2">مجموع نقاطك</p>
+          <p className="text-5xl font-black text-yellow-400">{score}</p>
+        </div>
+
+        {activeChallenge && score > activeChallenge.score && (
+          <div className="bg-green-900/50 border border-green-700 p-4 rounded-xl mb-6 w-full max-w-md">
+            <p className="text-green-400 font-bold text-lg">🏆 مبروك! لقد تغلبت على {activeChallenge.playerName}!</p>
+          </div>
+        )}
+        
+        <div className="w-full max-w-md">
+           <ChallengeShare playerName={playerName} score={score} puzzleId="session_1" />
+        </div>
+
+        <button onClick={() => setScreen('menu')} className="mt-4 text-slate-400 underline">
+          العودة للقائمة الرئيسية 🔄
+        </button>
       </div>
     );
   }
@@ -117,76 +161,52 @@ export default function MathGame() {
   return (
     <div className="min-h-screen flex flex-col text-white bg-slate-900">
       <header className="flex justify-between items-center p-4 bg-slate-800 shadow-md">
-        <button onClick={() => setScreen('menu')} className="text-slate-400 hover:text-white">← خروج</button>
-        <div className="text-sm font-bold text-blue-400 bg-blue-900/30 px-3 py-1 rounded-full">{puzzle.category}</div>
+        <div className="text-sm font-bold text-blue-400 bg-blue-900/30 px-3 py-1 rounded-full">{puzzle.title} (سؤال {questionsAnswered + 1}/5)</div>
         <div className="text-lg font-bold text-yellow-400">🏆 {score}</div>
       </header>
 
       <main className="flex-1 flex flex-col items-center p-4 max-w-md mx-auto w-full mt-4">
         <div className="w-full bg-slate-800 p-6 rounded-2xl border border-slate-700 shadow-xl mb-6">
-          <h2 className="text-xl font-bold mb-4 text-center">{puzzle.title}</h2>
-          <p className="text-slate-300 mb-6 whitespace-pre-line text-center leading-relaxed">{puzzle.prompt}</p>
+          <p className="text-slate-300 mb-4 whitespace-pre-line text-center">{puzzle.description}</p>
+          <ul className="list-disc list-inside space-y-2 text-blue-300 text-sm">
+            {puzzle.constraints.map((c: any, i: number) => (
+              <li key={i}>
+                {c.type === 'DIFF' ? `الفرق بين الدجاج والبط هو ${Math.abs(c.value)}.` : 
+                 c.type === 'SUM' ? `مجموع عدد الدجاج والأرانب يساوي ${c.value}.` : 
+                 c.type === 'WEIGHTED_SUM' ? `إجمالي عدد الأرجل هو ${c.value} رجلاً.` : ''}
+              </li>
+            ))}
+          </ul>
         </div>
 
-        {puzzle.interaction_type === 'multi_input' && (
-          <div className="w-full space-y-4">
-            {puzzle.config.inputs.map((input: any) => (
-              <div key={input.name} className="flex flex-col items-center bg-slate-800 p-4 rounded-xl border border-slate-600">
-                <span className="text-4xl mb-2">{input.icon}</span>
-                <label className="text-sm font-semibold mb-2">{input.label}</label>
-                <input
-                  type="number"
-                  disabled={isAnswered}
-                  placeholder={input.placeholder}
-                  value={inputAnswers[input.name] || ''}
-                  onChange={(e) => setInputAnswers({ ...inputAnswers, [input.name]: e.target.value })}
-                  className="w-full text-center bg-slate-900 border border-slate-500 rounded-lg p-2 text-xl font-bold text-white focus:outline-none focus:border-blue-400"
-                />
-              </div>
-            ))}
-            {!isAnswered && (
-              <button 
-                onClick={() => checkAnswer(inputAnswers)} 
-                // منع الإرسال إذا كانت أي خانة فارغة
-                disabled={!inputAnswers.chickens || !inputAnswers.ducks || !inputAnswers.rabbits}
-                className="w-full bg-blue-600 hover:bg-blue-500 disabled:bg-slate-600 disabled:cursor-not-allowed font-bold py-3 rounded-xl mt-4 transition-all"
-              >
-                تحقق من الإجابة
-              </button>
-            )}
+        {['chickens', 'ducks', 'rabbits'].map(field => (
+          <div key={field} className="w-full mb-3 flex flex-col items-center bg-slate-800 p-3 rounded-xl border border-slate-600">
+            <label className="text-sm font-semibold mb-1">
+              {field === 'chickens' ? 'الدجاج 🐔' : field === 'ducks' ? 'البط 🦆' : 'الأرانب 🐇'}
+            </label>
+            <input
+              type="number"
+              disabled={isAnswered}
+              placeholder="0"
+              value={inputAnswers[field] || ''}
+              onChange={(e) => setInputAnswers({ ...inputAnswers, [field]: e.target.value })}
+              className="w-full text-center bg-slate-900 border border-slate-500 rounded-lg p-2 text-xl font-bold text-white focus:outline-none focus:border-blue-400"
+            />
           </div>
-        )}
+        ))}
 
-        {puzzle.interaction_type === 'single_input' && !isAnswered && (
-           <div className="w-full flex flex-col items-center gap-4">
-             <input
-                type="number"
-                placeholder="اكتب الرقم المفقود هنا"
-                value={selectedAnswer || ''}
-                onChange={(e) => setSelectedAnswer(e.target.value)}
-                className="w-full text-center bg-slate-800 border-2 border-slate-600 rounded-xl p-4 text-2xl font-bold text-white focus:outline-none focus:border-blue-500"
-             />
-             <button 
-                onClick={() => checkAnswer(selectedAnswer)} 
-                disabled={!selectedAnswer}
-                className="w-full bg-blue-600 hover:bg-blue-500 disabled:bg-slate-600 disabled:cursor-not-allowed font-bold py-3 rounded-xl transition-all"
-             >
-                تأكيد
-             </button>
-           </div>
+        {!isAnswered && (
+          <button onClick={() => checkAnswer(inputAnswers)} className="w-full bg-blue-600 hover:bg-blue-500 font-bold py-3 rounded-xl mt-2">
+            تحقق من الإجابة
+          </button>
         )}
 
         {isAnswered && (
-          <div className="w-full mt-6">
-            <div className={`p-4 rounded-xl border mb-4 text-center ${isCorrect ? 'bg-green-900/30 border-green-700' : 'bg-red-900/30 border-red-700'}`}>
-              <span className={`font-bold block mb-2 ${isCorrect ? 'text-green-400' : 'text-red-400'}`}>
-                {isCorrect ? 'إجابة صحيحة! 🎉 (+10)' : 'إجابة خاطئة ⏳'}
-              </span>
-              <p className="text-slate-300 text-sm whitespace-pre-line">{puzzle.explanation}</p>
-            </div>
-            <button onClick={generateNewPuzzle} className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white font-bold py-3 rounded-xl">
-              اللغز التالي ➔
-            </button>
+          <div className={`w-full p-4 rounded-xl border mt-4 text-center ${isCorrect ? 'bg-green-900/30 border-green-700' : 'bg-red-900/30 border-red-700'}`}>
+            <span className={`font-bold block mb-1 ${isCorrect ? 'text-green-400' : 'text-red-400'}`}>
+              {isCorrect ? 'إجابة صحيحة! 🎉 (+10)' : 'إجابة خاطئة ⏳'}
+            </span>
+            <p className="text-slate-400 text-xs mt-2">جاري الانتقال للسؤال التالي...</p>
           </div>
         )}
       </main>
