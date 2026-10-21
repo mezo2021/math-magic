@@ -7,6 +7,18 @@ import ChallengeShare from '@/components/ChallengeShare';
 import { usePlayerStore } from '@/lib/usePlayerStore';
 import { ALL_ACHIEVEMENTS } from '@/lib/store';
 
+const AchievementToast = ({ achievement }: { achievement: string | null }) => {
+  if (!achievement) return null;
+  return (
+    <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 animate-bounce">
+      <div className="bg-yellow-500 text-black px-6 py-3 rounded-2xl shadow-2xl font-bold flex items-center gap-2 border-2 border-yellow-300">
+        <span>🏅 إنجاز جديد:</span>
+        <span>{achievement}</span>
+      </div>
+    </div>
+  );
+};
+
 export default function MathGame() {
   const { player, updatePlayer } = usePlayerStore();
   
@@ -25,8 +37,6 @@ export default function MathGame() {
   const [isCorrect, setIsCorrect] = useState(false);
   
   const [activeChallenge, setActiveChallenge] = useState<ChallengeData | null>(null);
-
-  // حالة الإشعارات المنبثقة للشارات الجديدة
   const [toastAchievement, setToastAchievement] = useState<string | null>(null);
 
   useEffect(() => {
@@ -94,37 +104,29 @@ export default function MathGame() {
       if (questionsAnswered + 1 >= 5) {
         setScreen('end');
         
+        let justUnlockedStr: string | null = null;
+
         updatePlayer(prev => {
           const highest = Math.max(prev.progress.highestScore, newScore);
           const solvedCount = prev.progress.totalPuzzlesSolved + (correct ? 1 : 0);
           
           const newAchievements = [...prev.progress.achievements];
-          let justUnlocked: string | null = null;
 
-          // فحص الشارات
           if (solvedCount >= 1 && !newAchievements.includes('first_win')) {
             newAchievements.push('first_win');
-            justUnlocked = '🐣 المبتدئ الذكي';
+            justUnlockedStr = '🐣 المبتدئ الذكي';
           }
           if (newScore >= 50 && !newAchievements.includes('score_50')) {
             newAchievements.push('score_50');
-            justUnlocked = '⚡ السريع';
+            justUnlockedStr = '⚡ السريع';
           }
           if (highest >= 100 && !newAchievements.includes('score_100')) {
             newAchievements.push('score_100');
-            justUnlocked = '🏆 الأسطورة';
+            justUnlockedStr = '🏆 الأسطورة';
           }
-          
-          // فحص شارة قاهر التحديات
           if (activeChallenge && newScore > activeChallenge.score && !newAchievements.includes('challenge_win')) {
             newAchievements.push('challenge_win');
-            justUnlocked = '⚔️ قاهر التحديات';
-          }
-
-          // إذا تم فتح شارة جديدة، نعرض الإشعار
-          if (justUnlocked) {
-            setToastAchievement(justUnlocked);
-            setTimeout(() => setToastAchievement(null), 4000);
+            justUnlockedStr = '⚔️ قاهر التحديات';
           }
 
           return {
@@ -137,6 +139,13 @@ export default function MathGame() {
             }
           };
         });
+
+        // عرض الإشعار بعد تحديث الحالة (لتجنب أخطاء React)
+        if (justUnlockedStr) {
+          setToastAchievement(justUnlockedStr);
+          setTimeout(() => setToastAchievement(null), 4000);
+        }
+
       } else {
         setQuestionsAnswered(prev => prev + 1);
         generateNewPuzzle();
@@ -152,19 +161,6 @@ export default function MathGame() {
         theme: prev.preferences.theme === 'ocean' ? 'barbie' : 'ocean'
       }
     }));
-  };
-
-  // مكون الإشعار المنبثق (Toast)
-  const AchievementToast = () => {
-    if (!toastAchievement) return null;
-    return (
-      <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 animate-bounce">
-        <div className="bg-yellow-500 text-black px-6 py-3 rounded-2xl shadow-2xl font-bold flex items-center gap-2 border-2 border-yellow-300">
-          <span>🏅 إنجاز جديد:</span>
-          <span>{toastAchievement}</span>
-        </div>
-      </div>
-    );
   };
 
   if (wasmError) return (
@@ -185,7 +181,8 @@ export default function MathGame() {
   if (screen === 'menu') {
     return (
       <div className={`min-h-screen flex flex-col items-center justify-center p-6 ${themeStyles.bg} transition-colors duration-300 relative`}>
-        <AchievementToast />
+        <AchievementToast achievement={toastAchievement} />
+        
         <div className="absolute top-4 left-4">
           <button onClick={toggleTheme} className="px-3 py-1.5 rounded-lg text-xs font-bold border border-current opacity-80 hover:opacity-100 transition-opacity">
             🎨 الثيم: {isBarbie ? 'الوردي اللامع 🌸' : 'المحيط 🌊'}
@@ -220,7 +217,6 @@ export default function MathGame() {
           <span className="text-3xl">🧠</span> {activeChallenge ? 'اقبل التحدي وابدأ' : 'ابدأ التحدي'}
         </button>
 
-        {/* معرض الشارات والإنجازات */}
         <div className={`w-full max-w-md ${themeStyles.card} p-4 rounded-2xl border`}>
           <h3 className="text-md font-bold mb-3 text-center text-yellow-400">🏅 الإنجازات والوسامات</h3>
           <div className="grid grid-cols-4 gap-2">
@@ -247,7 +243,7 @@ export default function MathGame() {
   if (screen === 'end') {
     return (
       <div className={`min-h-screen flex flex-col items-center justify-center p-6 ${themeStyles.bg} text-center transition-colors duration-300 relative`}>
-        <AchievementToast />
+        <AchievementToast achievement={toastAchievement} />
         <span className="text-6xl mb-4">🎉</span>
         <h1 className="text-4xl font-bold mb-2">أحسنت يا {player.profile.name}!</h1>
         <p className="text-xl text-slate-300 mb-8">لقد أكملت الجلسة.</p>
@@ -276,7 +272,8 @@ export default function MathGame() {
 
   return (
     <div className={`min-h-screen flex flex-col ${themeStyles.bg} transition-colors duration-300 relative`}>
-      <AchievementToast />
+      <AchievementToast achievement={toastAchievement} />
+      
       <header className={`flex justify-between items-center p-4 ${themeStyles.headerBg} shadow-md`}>
         <div className={`text-sm font-bold ${themeStyles.accentText} bg-black/20 px-3 py-1 rounded-full`}>
           {puzzle.title} (سؤال {questionsAnswered + 1}/5)
