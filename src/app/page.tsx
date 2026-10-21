@@ -30,7 +30,8 @@ export default function MathGame() {
   const [currentRoundScore, setCurrentRoundScore] = useState(0);
   const [questionsAnswered, setQuestionsAnswered] = useState(0);
   
-  const [inputAnswers, setInputAnswers] = useState<any>({});
+  // حالة العدادات للحيوانات (مبدئياً 0 لكل حيوان)
+  const [inputAnswers, setInputAnswers] = useState<any>({ chickens: 0, ducks: 0, rabbits: 0 });
   const [selectedChoice, setSelectedChoice] = useState<string | null>(null);
   const [singleInput, setSingleInput] = useState<string>('');
   
@@ -69,6 +70,9 @@ export default function MathGame() {
     primaryBtn: isBarbie 
       ? 'bg-pink-600 hover:bg-pink-500 text-white border-2 border-pink-400' 
       : 'bg-blue-600 hover:bg-blue-500 text-white border-2 border-cyan-400',
+    counterBtn: isBarbie
+      ? 'bg-pink-500/30 hover:bg-pink-500/50 active:scale-95 border-2 border-pink-400 text-white'
+      : 'bg-cyan-500/30 hover:bg-cyan-500/50 active:scale-95 border-2 border-cyan-400 text-white',
     accentText: isBarbie ? 'text-pink-200' : 'text-cyan-300',
     headerBg: 'bg-transparent backdrop-blur-md border-b border-white/10',
   };
@@ -76,12 +80,36 @@ export default function MathGame() {
   const generateNewPuzzle = () => {
     const newPuzzle = generatePuzzle(lang);
     setPuzzle(newPuzzle);
-    setInputAnswers({});
+    setInputAnswers({ chickens: 0, ducks: 0, rabbits: 0 });
     setSelectedChoice(null);
     setSingleInput('');
     setIsAnswered(false);
     setIsCorrect(false);
     setShowSolution(false);
+  };
+
+  // دالة تحديث أعداد الحيوانات مع الربط التلقائي بالنسبة المساعدة (Smart Ratio Coupling)
+  const handleAnimalCounter = (field: string, delta: number) => {
+    if (isAnswered) return;
+    
+    setInputAnswers((prev: any) => {
+      const currentVal = prev[field] || 0;
+      const newVal = Math.max(0, currentVal + delta);
+      
+      // إذا قام اللاعب بتغيير عدد الأرانب، نقوم بتحديث البط والدجاج تلقائياً حسب النسب المساعدة للتجربة
+      if (field === 'rabbits') {
+        return {
+          rabbits: newVal,
+          ducks: newVal * 4,
+          chickens: newVal * 8,
+        };
+      }
+      
+      return {
+        ...prev,
+        [field]: newVal
+      };
+    });
   };
 
   const startGame = () => {
@@ -246,7 +274,9 @@ export default function MathGame() {
     );
   }
 
-  // شاشة اللغز (Puzzle Screen)
+  // =====================================================================
+  // 🔴 شاشة اللغز (Puzzle Screen - بالعدادات التفاعلية)
+  // =====================================================================
   return (
     <div className={`min-h-screen flex flex-col ${themeStyles.bg} transition-all duration-500 relative overflow-hidden`} dir={isRTL ? 'rtl' : 'ltr'}>
       <AchievementToast achievement={toastAchievement} text={t.newAchievement} />
@@ -268,22 +298,40 @@ export default function MathGame() {
           </p>
         </div>
 
+        {/* ⚡ العدادات التفاعلية (+ / -) للحيوانات بدلاً من لوحة المفاتيح ⚡ */}
         {puzzle?.interaction_type === 'multi_input_animals' && (
-          <>
-            {['chickens', 'ducks', 'rabbits'].map(field => (
-              <div key={field} className={`w-full mb-4 flex flex-col items-center ${themeStyles.card} p-4 rounded-3xl`}>
-                <label className="text-lg font-black mb-2 text-white">{t[field as keyof typeof t]}</label>
-                <input
-                  type="number"
-                  disabled={isAnswered}
-                  placeholder="0"
-                  value={inputAnswers[field] || ''}
-                  onChange={(e) => setInputAnswers({ ...inputAnswers, [field]: Number(e.target.value) })}
-                  className={`w-full text-center ${themeStyles.inputBg} rounded-2xl p-4 text-3xl font-black focus:outline-none transition-all`}
-                />
+          <div className="w-full space-y-4">
+            {['rabbits', 'ducks', 'chickens'].map(field => (
+              <div key={field} className={`w-full flex items-center justify-between ${themeStyles.card} p-4 rounded-3xl border-2`}>
+                <span className="text-xl font-black text-white min-w-[100px]">{t[field as keyof typeof t]}</span>
+                
+                <div className="flex items-center gap-3">
+                  <button 
+                    disabled={isAnswered}
+                    onClick={() => handleAnimalCounter(field, -1)}
+                    className={`w-12 h-12 rounded-2xl ${themeStyles.counterBtn} font-black text-2xl flex items-center justify-center`}
+                  >
+                    -
+                  </button>
+                  
+                  <span className="w-14 text-center text-3xl font-black text-yellow-300">
+                    {inputAnswers[field] || 0}
+                  </span>
+                  
+                  <button 
+                    disabled={isAnswered}
+                    onClick={() => handleAnimalCounter(field, 1)}
+                    className={`w-12 h-12 rounded-2xl ${themeStyles.counterBtn} font-black text-2xl flex items-center justify-center`}
+                  >
+                    +
+                  </button>
+                </div>
               </div>
             ))}
-          </>
+            <p className="text-center text-xs font-bold text-white/60 mt-1">
+              💡 {lang === 'ar' ? 'تلميح: زيادة الأرانب تقوم بضبط باقي الأعداد حسب النسبة تلقائياً!' : 'Hint: Increasing rabbits auto-adjusts other animals based on ratio!'}
+            </p>
+          </div>
         )}
 
         {puzzle?.interaction_type === 'multiple_choice' && (
@@ -306,15 +354,22 @@ export default function MathGame() {
         )}
 
         {puzzle?.interaction_type === 'single_input' && (
-          <div className={`w-full flex flex-col items-center ${themeStyles.card} p-5 rounded-3xl`}>
-             <input
-              type="number"
-              disabled={isAnswered}
-              placeholder="0"
-              value={singleInput}
-              onChange={(e) => setSingleInput(e.target.value)}
-              className={`w-full text-center ${themeStyles.inputBg} rounded-2xl p-5 text-4xl font-black focus:outline-none transition-all`}
-            />
+          <div className={`w-full flex items-center justify-between ${themeStyles.card} p-5 rounded-3xl`}>
+             <button 
+                disabled={isAnswered}
+                onClick={() => setSingleInput(prev => String(Math.max(0, Number(prev || 0) - 1)))}
+                className={`w-14 h-14 rounded-2xl ${themeStyles.counterBtn} font-black text-3xl flex items-center justify-center`}
+             >
+               -
+             </button>
+             <span className="text-4xl font-black text-yellow-300">{singleInput || '0'}</span>
+             <button 
+                disabled={isAnswered}
+                onClick={() => setSingleInput(prev => String(Number(prev || 0) + 1))}
+                className={`w-14 h-14 rounded-2xl ${themeStyles.counterBtn} font-black text-3xl flex items-center justify-center`}
+             >
+               +
+             </button>
           </div>
         )}
 
@@ -322,7 +377,7 @@ export default function MathGame() {
           <button 
             onClick={checkAnswer} 
             disabled={
-              (puzzle?.interaction_type === 'multi_input_animals' && (!inputAnswers.chickens || !inputAnswers.ducks || !inputAnswers.rabbits)) ||
+              (puzzle?.interaction_type === 'multi_input_animals' && (inputAnswers.chickens === 0 && inputAnswers.ducks === 0 && inputAnswers.rabbits === 0)) ||
               (puzzle?.interaction_type === 'multiple_choice' && !selectedChoice) ||
               (puzzle?.interaction_type === 'single_input' && !singleInput)
             }
