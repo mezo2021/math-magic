@@ -34,7 +34,8 @@ export interface PlayerProfile {
 
 const STORAGE_KEY = 'math_magic_player_store_v1';
 
-const defaultProfile: PlayerProfile = {
+// دالة لإنشاء نسخة افتراضية جديدة في كل مرة (تمنع تلوث الذاكرة)
+const createDefaultProfile = (): PlayerProfile => ({
   schemaVersion: 1,
   profile: {
     id: 'user_' + Math.random().toString(36).substring(2, 9),
@@ -50,31 +51,40 @@ const defaultProfile: PlayerProfile = {
     totalPuzzlesSolved: 0,
     achievements: [],
   },
-};
+});
 
 export function loadPlayerStore(): PlayerProfile {
-  if (typeof window === 'undefined') return defaultProfile;
+  if (typeof window === 'undefined') return createDefaultProfile();
   
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (stored) {
       const data: PlayerProfile = JSON.parse(stored);
       if (data.schemaVersion === 1) {
-        return data;
+        // الدمج الآمن: نضمن وجود الحقول الجديدة حتى لو كانت البيانات قديمة
+        return {
+          ...createDefaultProfile(),
+          ...data,
+          profile: { ...createDefaultProfile().profile, ...data.profile },
+          preferences: { ...createDefaultProfile().preferences, ...data.preferences },
+          progress: { ...createDefaultProfile().progress, ...data.progress },
+        };
       }
     }
     
+    // ترحيل البيانات القديمة (أفضل نتيجة) بأمان
     const legacyScore = localStorage.getItem('math_magic_score');
-    const initialProfile = { ...defaultProfile };
-    if (legacyScore) {
-      initialProfile.progress.highestScore = parseInt(legacyScore, 10) || 0;
+    const initialProfile = createDefaultProfile();
+    
+    if (legacyScore && !isNaN(parseInt(legacyScore, 10))) {
+      initialProfile.progress.highestScore = parseInt(legacyScore, 10);
     }
     
     savePlayerStore(initialProfile);
     return initialProfile;
   } catch (e) {
     console.error('خطأ في قراءة تخزين اللاعب:', e);
-    return defaultProfile;
+    return createDefaultProfile();
   }
 }
 
