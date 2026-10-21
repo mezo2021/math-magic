@@ -32,7 +32,11 @@ export default function MathGame() {
   
   const [currentRoundScore, setCurrentRoundScore] = useState(0);
   const [questionsAnswered, setQuestionsAnswered] = useState(0);
+  
+  // حالة الإجابات
   const [inputAnswers, setInputAnswers] = useState<any>({});
+  const [selectedChoice, setSelectedChoice] = useState<string | null>(null);
+  
   const [isAnswered, setIsAnswered] = useState(false);
   const [isCorrect, setIsCorrect] = useState(false);
   
@@ -85,15 +89,23 @@ export default function MathGame() {
     const newPuzzle = wasm.generate_puzzle(newSeed); 
     setPuzzle(newPuzzle);
     setInputAnswers({});
+    setSelectedChoice(null);
     setIsAnswered(false);
     setIsCorrect(false);
   };
 
-  const checkAnswer = (answer: any) => {
+  const checkAnswer = () => {
     if (isAnswered) return;
     setIsAnswered(true);
 
-    const correct = wasm.validate_answer(seed, answer);
+    let answerPayload = {};
+    if (puzzle.interaction_type === 'multi_input') {
+      answerPayload = inputAnswers;
+    } else {
+      answerPayload = { choice: selectedChoice };
+    }
+
+    const correct = wasm.validate_answer(seed, answerPayload);
     setIsCorrect(correct);
 
     const pointsEarned = correct ? 10 : 0;
@@ -109,43 +121,28 @@ export default function MathGame() {
         updatePlayer(prev => {
           const highest = Math.max(prev.progress.highestScore, newScore);
           const solvedCount = prev.progress.totalPuzzlesSolved + (correct ? 1 : 0);
-          
           const newAchievements = [...prev.progress.achievements];
 
           if (solvedCount >= 1 && !newAchievements.includes('first_win')) {
-            newAchievements.push('first_win');
-            justUnlockedStr = '🐣 المبتدئ الذكي';
+            newAchievements.push('first_win'); justUnlockedStr = '🐣 المبتدئ الذكي';
           }
           if (newScore >= 50 && !newAchievements.includes('score_50')) {
-            newAchievements.push('score_50');
-            justUnlockedStr = '⚡ السريع';
+            newAchievements.push('score_50'); justUnlockedStr = '⚡ السريع';
           }
           if (highest >= 100 && !newAchievements.includes('score_100')) {
-            newAchievements.push('score_100');
-            justUnlockedStr = '🏆 الأسطورة';
+            newAchievements.push('score_100'); justUnlockedStr = '🏆 الأسطورة';
           }
           if (activeChallenge && newScore > activeChallenge.score && !newAchievements.includes('challenge_win')) {
-            newAchievements.push('challenge_win');
-            justUnlockedStr = '⚔️ قاهر التحديات';
+            newAchievements.push('challenge_win'); justUnlockedStr = '⚔️ قاهر التحديات';
           }
 
-          return {
-            ...prev,
-            progress: {
-              ...prev.progress,
-              highestScore: highest,
-              totalPuzzlesSolved: solvedCount,
-              achievements: newAchievements,
-            }
-          };
+          return { ...prev, progress: { ...prev.progress, highestScore: highest, totalPuzzlesSolved: solvedCount, achievements: newAchievements } };
         });
 
-        // عرض الإشعار بعد تحديث الحالة (لتجنب أخطاء React)
         if (justUnlockedStr) {
           setToastAchievement(justUnlockedStr);
           setTimeout(() => setToastAchievement(null), 4000);
         }
-
       } else {
         setQuestionsAnswered(prev => prev + 1);
         generateNewPuzzle();
@@ -154,13 +151,7 @@ export default function MathGame() {
   };
 
   const toggleTheme = () => {
-    updatePlayer(prev => ({
-      ...prev,
-      preferences: {
-        ...prev.preferences,
-        theme: prev.preferences.theme === 'ocean' ? 'barbie' : 'ocean'
-      }
-    }));
+    updatePlayer(prev => ({ ...prev, preferences: { ...prev.preferences, theme: prev.preferences.theme === 'ocean' ? 'barbie' : 'ocean' } }));
   };
 
   if (wasmError) return (
@@ -198,7 +189,6 @@ export default function MathGame() {
           <div className={`${themeStyles.card} border-2 border-yellow-500 p-4 rounded-xl mb-6 text-center shadow-lg`}>
             <h3 className="text-xl font-bold text-yellow-400 mb-2">⚔️ أنت في وضع التحدي!</h3>
             <p className="text-slate-200">تحدي من: <span className="font-bold text-white">{activeChallenge.playerName}</span></p>
-            <p className="text-sm text-slate-300 mt-1">النتيجة المطلوبة: <span className="font-bold text-green-400">{activeChallenge.score + 1} نقطة</span></p>
           </div>
         )}
 
@@ -223,12 +213,7 @@ export default function MathGame() {
             {ALL_ACHIEVEMENTS.map(ach => {
               const unlocked = player.progress.achievements.includes(ach.id);
               return (
-                <div 
-                  key={ach.id} 
-                  className={`flex flex-col items-center p-2 rounded-xl text-center border transition-all ${
-                    unlocked ? 'bg-yellow-500/10 border-yellow-500/50 text-white' : 'bg-black/20 border-slate-700 text-slate-500 opacity-50'
-                  }`}
-                >
+                <div key={ach.id} className={`flex flex-col items-center p-2 rounded-xl text-center border transition-all ${unlocked ? 'bg-yellow-500/10 border-yellow-500/50 text-white' : 'bg-black/20 border-slate-700 text-slate-500 opacity-50'}`}>
                   <span className="text-2xl mb-1">{ach.icon}</span>
                   <span className="text-[10px] font-bold leading-tight">{ach.title}</span>
                 </div>
@@ -246,19 +231,12 @@ export default function MathGame() {
         <AchievementToast achievement={toastAchievement} />
         <span className="text-6xl mb-4">🎉</span>
         <h1 className="text-4xl font-bold mb-2">أحسنت يا {player.profile.name}!</h1>
-        <p className="text-xl text-slate-300 mb-8">لقد أكملت الجلسة.</p>
         
         <div className={`${themeStyles.card} p-8 rounded-2xl border mb-6 w-full max-w-md shadow-xl`}>
           <p className="text-slate-300 mb-2">نقاط هذه الجلسة</p>
           <p className="text-5xl font-black text-yellow-400">{currentRoundScore}</p>
         </div>
 
-        {activeChallenge && currentRoundScore > activeChallenge.score && (
-          <div className="bg-green-900/50 border border-green-700 p-4 rounded-xl mb-6 w-full max-w-md">
-            <p className="text-green-400 font-bold text-lg">🏆 مبروك! لقد تغلبت على {activeChallenge.playerName}!</p>
-          </div>
-        )}
-        
         <div className="w-full max-w-md">
            <ChallengeShare playerName={player.profile.name} score={currentRoundScore} puzzleId="session_1" />
         </div>
@@ -284,35 +262,68 @@ export default function MathGame() {
       <main className="flex-1 flex flex-col items-center p-4 max-w-md mx-auto w-full mt-4">
         <div className={`w-full ${themeStyles.card} p-6 rounded-2xl border shadow-xl mb-6`}>
           <p className="text-slate-200 mb-4 whitespace-pre-line text-center">{puzzle.description}</p>
-          <ul className={`list-disc list-inside space-y-2 ${themeStyles.accentText} text-sm`}>
-            {puzzle.constraints.map((c: any, i: number) => (
-              <li key={i}>
-                {c.type === 'DIFF' ? `الفرق بين الدجاج والبط هو ${Math.abs(c.value)}.` : 
-                 c.type === 'SUM' ? `مجموع عدد الدجاج والأرانب يساوي ${c.value}.` : 
-                 c.type === 'WEIGHTED_SUM' ? `إجمالي عدد الأرجل هو ${c.value} رجلاً.` : ''}
-              </li>
-            ))}
-          </ul>
+          
+          {/* عرض القيود للغز المزرعة */}
+          {puzzle.interaction_type === 'multi_input' && (
+            <ul className={`list-disc list-inside space-y-2 ${themeStyles.accentText} text-sm`}>
+              {puzzle.constraints.map((c: any, i: number) => (
+                <li key={i}>
+                  {c.type === 'DIFF' ? `الفرق بين الدجاج والبط هو ${Math.abs(c.value)}.` : 
+                   c.type === 'SUM' ? `مجموع عدد الدجاج والأرانب يساوي ${c.value}.` : 
+                   c.type === 'WEIGHTED_SUM' ? `إجمالي عدد الأرجل هو ${c.value} رجلاً.` : ''}
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
 
-        {['chickens', 'ducks', 'rabbits'].map(field => (
-          <div key={field} className={`w-full mb-3 flex flex-col items-center ${themeStyles.card} p-3 rounded-xl border`}>
-            <label className="text-sm font-semibold mb-1">
-              {field === 'chickens' ? 'الدجاج 🐔' : field === 'ducks' ? 'البط 🦆' : 'الأرانب 🐇'}
-            </label>
-            <input
-              type="number"
-              disabled={isAnswered}
-              placeholder="0"
-              value={inputAnswers[field] || ''}
-              onChange={(e) => setInputAnswers({ ...inputAnswers, [field]: Number(e.target.value) })}
-              className="w-full text-center bg-black/30 border border-slate-600 rounded-lg p-2 text-xl font-bold text-white focus:outline-none focus:border-current"
-            />
+        {/* حقل الإدخال للغز المزرعة */}
+        {puzzle.interaction_type === 'multi_input' && (
+          <>
+            {['chickens', 'ducks', 'rabbits'].map(field => (
+              <div key={field} className={`w-full mb-3 flex flex-col items-center ${themeStyles.card} p-3 rounded-xl border`}>
+                <label className="text-sm font-semibold mb-1">
+                  {field === 'chickens' ? 'الدجاج 🐔' : field === 'ducks' ? 'البط 🦆' : 'الأرانب 🐇'}
+                </label>
+                <input
+                  type="number"
+                  disabled={isAnswered}
+                  placeholder="0"
+                  value={inputAnswers[field] || ''}
+                  onChange={(e) => setInputAnswers({ ...inputAnswers, [field]: Number(e.target.value) })}
+                  className="w-full text-center bg-black/30 border border-slate-600 rounded-lg p-2 text-xl font-bold text-white focus:outline-none focus:border-current"
+                />
+              </div>
+            ))}
+          </>
+        )}
+
+        {/* أزرار الاختيار للغز الفخ المنطقي */}
+        {puzzle.interaction_type === 'multiple_choice' && (
+          <div className="w-full space-y-3">
+            {puzzle.options.map((opt: any) => (
+              <button
+                key={opt.id}
+                disabled={isAnswered}
+                onClick={() => setSelectedChoice(opt.id)}
+                className={`w-full p-4 rounded-xl border-2 font-bold text-lg transition-all ${
+                  selectedChoice === opt.id 
+                    ? (isAnswered ? (isCorrect ? 'bg-green-600 border-green-400 text-white' : 'bg-red-600 border-red-400 text-white') : 'bg-blue-600 border-blue-400 text-white')
+                    : `${themeStyles.card} hover:bg-slate-700`
+                }`}
+              >
+                {opt.text}
+              </button>
+            ))}
           </div>
-        ))}
+        )}
 
         {!isAnswered && (
-          <button onClick={() => checkAnswer(inputAnswers)} className={`w-full ${themeStyles.primaryBtn} font-bold py-3 rounded-xl mt-2 shadow-lg`}>
+          <button 
+            onClick={checkAnswer} 
+            disabled={puzzle.interaction_type === 'multi_input' ? (!inputAnswers.chickens || !inputAnswers.ducks || !inputAnswers.rabbits) : !selectedChoice}
+            className={`w-full ${themeStyles.primaryBtn} font-bold py-3 rounded-xl mt-6 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed`}
+          >
             تحقق من الإجابة
           </button>
         )}
