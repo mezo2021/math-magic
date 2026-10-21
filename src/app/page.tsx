@@ -6,7 +6,7 @@ import { loadMathEngine } from '@/lib/wasm-loader';
 import ChallengeShare from '@/components/ChallengeShare';
 import { usePlayerStore } from '@/lib/usePlayerStore';
 import { ALL_ACHIEVEMENTS } from '@/lib/store';
-import { translations, Language } from '@/lib/i18n';
+import { translations } from '@/lib/i18n';
 
 const AchievementToast = ({ achievement, text }: { achievement: string | null, text: string }) => {
   if (!achievement) return null;
@@ -67,17 +67,18 @@ export default function MathGame() {
 
   if (!isMounted || !player) return <div className="min-h-screen bg-slate-900 flex items-center justify-center text-white">جاري التحميل... ⏳</div>;
 
-  const lang = player.preferences.language;
-  const t = translations[lang]; // اختيار اللغة
-  const isBarbie = player.preferences.theme === 'barbie';
+  // 🛡️ الحماية من البيانات القديمة (Fallbacks)
+  const lang = player.preferences?.language || 'ar';
+  const t = translations[lang] || translations['ar'];
+  const isBarbie = player.preferences?.theme === 'barbie';
   const isRTL = lang === 'ar';
 
   const themeStyles = {
-    bg: isBarbie ? 'bg-pink-950 text-white' : 'bg-slate-900 text-white',
-    card: isBarbie ? 'bg-pink-900/40 border-pink-500/50' : 'bg-slate-800 border-slate-700',
-    primaryBtn: isBarbie ? 'bg-pink-600 hover:bg-pink-500 text-white' : 'bg-blue-600 hover:bg-blue-500 text-white',
-    accentText: isBarbie ? 'text-pink-400' : 'text-blue-400',
-    headerBg: isBarbie ? 'bg-pink-900/60' : 'bg-slate-800',
+    bg: isBarbie ? 'bg-fuchsia-950 text-white' : 'bg-slate-900 text-white',
+    card: isBarbie ? 'bg-fuchsia-900/30 border-fuchsia-500/40' : 'bg-slate-800 border-slate-700',
+    primaryBtn: isBarbie ? 'bg-fuchsia-600 hover:bg-fuchsia-500 text-white shadow-[0_0_15px_rgba(192,38,211,0.4)]' : 'bg-blue-600 hover:bg-blue-500 text-white',
+    accentText: isBarbie ? 'text-fuchsia-400' : 'text-blue-400',
+    headerBg: isBarbie ? 'bg-fuchsia-900/50' : 'bg-slate-800',
   };
 
   const generateNewPuzzle = () => {
@@ -101,7 +102,7 @@ export default function MathGame() {
   };
 
   const checkAnswer = () => {
-    if (isAnswered) return;
+    if (isAnswered || !puzzle) return;
     setIsAnswered(true);
 
     let answerPayload = {};
@@ -129,7 +130,7 @@ export default function MathGame() {
         updatePlayer(prev => {
           const highest = Math.max(prev.progress.highestScore, newScore);
           const solvedCount = prev.progress.totalPuzzlesSolved + (correct ? 1 : 0);
-          const newAchievements = [...prev.progress.achievements];
+          const newAchievements = [...(prev.progress.achievements || [])];
 
           if (solvedCount >= 1 && !newAchievements.includes('first_win')) {
             newAchievements.push('first_win'); justUnlockedStr = lang === 'ar' ? '🐣 المبتدئ الذكي' : '🐣 Smart Beginner';
@@ -159,22 +160,21 @@ export default function MathGame() {
   };
 
   const toggleTheme = () => {
-    updatePlayer(prev => ({ ...prev, preferences: { ...prev.preferences, theme: prev.preferences.theme === 'ocean' ? 'barbie' : 'ocean' } }));
+    updatePlayer(prev => ({ ...prev, preferences: { ...prev.preferences, theme: prev.preferences?.theme === 'ocean' ? 'barbie' : 'ocean' } }));
   };
 
   const toggleLanguage = () => {
-    updatePlayer(prev => ({ ...prev, preferences: { ...prev.preferences, language: prev.preferences.language === 'ar' ? 'en' : 'ar' } }));
+    updatePlayer(prev => ({ ...prev, preferences: { ...prev.preferences, language: prev.preferences?.language === 'ar' ? 'en' : 'ar' } }));
   };
 
-  // دالة لصياغة النص المترجم (تم التحديث للاستدعاء المباشر للدوال)
   const renderPuzzleText = () => {
-    if (!puzzle) return "";
+    if (!puzzle || !puzzle.params) return "";
     if (puzzle.puzzle_type === 'farm') {
-      return t.farm_template(puzzle.params.missing);
+      return t.farm_template(puzzle.params.missing || 0);
     } else if (puzzle.puzzle_type === 'distance') {
-      return t.distance_template(puzzle.params.distance);
+      return t.distance_template(puzzle.params.distance || 0);
     } else if (puzzle.puzzle_type === 'sequence') {
-      return t.sequence_template(puzzle.params.seq.join(" , "));
+      return t.sequence_template((puzzle.params.seq || []).join(" , "));
     }
     return "";
   };
@@ -208,10 +208,10 @@ export default function MathGame() {
           </button>
         </div>
 
-        <h1 className={`text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r ${isBarbie ? 'from-pink-400 to-purple-400' : 'from-blue-400 to-purple-500'} mb-2 text-center`}>
+        <h1 className={`text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r ${isBarbie ? 'from-fuchsia-400 to-purple-400' : 'from-blue-400 to-purple-500'} mb-2 text-center`}>
           {t.appTitle}
         </h1>
-        <p className="text-slate-300 mb-6 text-center text-sm">{t.highestScore} <span className="text-yellow-400 font-bold">{player.progress.highestScore}</span></p>
+        <p className="text-slate-300 mb-6 text-center text-sm">{t.highestScore} <span className="text-yellow-400 font-bold">{player.progress?.highestScore || 0}</span></p>
         
         {activeChallenge && (
           <div className={`${themeStyles.card} border-2 border-yellow-500 p-4 rounded-xl mb-6 text-center shadow-lg`}>
@@ -223,7 +223,7 @@ export default function MathGame() {
         <input 
           type="text" 
           placeholder={t.enterName} 
-          value={player.profile.name}
+          value={player.profile?.name || ''}
           onChange={(e) => {
             const newName = e.target.value;
             updatePlayer(prev => ({ ...prev, profile: { ...prev.profile, name: newName } }));
@@ -239,7 +239,7 @@ export default function MathGame() {
           <h3 className="text-md font-bold mb-3 text-center text-yellow-400">🏅 {t.achievements}</h3>
           <div className="grid grid-cols-4 gap-2">
             {ALL_ACHIEVEMENTS.map(ach => {
-              const unlocked = player.progress.achievements.includes(ach.id);
+              const unlocked = player.progress?.achievements?.includes(ach.id);
               return (
                 <div key={ach.id} className={`flex flex-col items-center p-2 rounded-xl text-center border transition-all ${unlocked ? 'bg-yellow-500/10 border-yellow-500/50 text-white' : 'bg-black/20 border-slate-700 text-slate-500 opacity-50'}`}>
                   <span className="text-2xl mb-1">{ach.icon}</span>
@@ -255,12 +255,17 @@ export default function MathGame() {
     );
   }
 
+  // 🛡️ حماية شاشة اللغز من الانهيار إذا لم يتم توليد اللغز بعد
+  if (screen === 'puzzle' && !puzzle) {
+    return <div className={`min-h-screen flex items-center justify-center ${themeStyles.bg}`}>جاري توليد اللغز... ⏳</div>;
+  }
+
   if (screen === 'end') {
     return (
       <div className={`min-h-screen flex flex-col items-center justify-center p-6 ${themeStyles.bg} text-center transition-colors duration-300 relative`} dir={isRTL ? 'rtl' : 'ltr'}>
         <AchievementToast achievement={toastAchievement} text={t.newAchievement} />
         <span className="text-6xl mb-4">🎉</span>
-        <h1 className="text-4xl font-bold mb-2">{t.congrats} {player.profile.name}!</h1>
+        <h1 className="text-4xl font-bold mb-2">{t.congrats} {player.profile?.name || ''}!</h1>
         <p className="text-xl text-slate-300 mb-8">{t.completedSession}</p>
         
         <div className={`${themeStyles.card} p-8 rounded-2xl border mb-6 w-full max-w-md shadow-xl`}>
@@ -269,7 +274,7 @@ export default function MathGame() {
         </div>
 
         <div className="w-full max-w-md">
-           <ChallengeShare playerName={player.profile.name} score={currentRoundScore} puzzleId="session_1" />
+           <ChallengeShare playerName={player.profile?.name || 'Player'} score={currentRoundScore} puzzleId="session_1" />
         </div>
 
         <button onClick={() => setScreen('menu')} className="mt-4 text-slate-300 underline">
@@ -295,11 +300,11 @@ export default function MathGame() {
           <p className="text-slate-200 mb-4 whitespace-pre-line text-center text-lg leading-relaxed">{renderPuzzleText()}</p>
         </div>
 
-        {puzzle.interaction_type === 'multi_input_animals' && (
+        {puzzle?.interaction_type === 'multi_input_animals' && (
           <>
             {['chickens', 'ducks', 'rabbits'].map(field => (
               <div key={field} className={`w-full mb-3 flex flex-col items-center ${themeStyles.card} p-3 rounded-xl border`}>
-                <label className="text-sm font-semibold mb-1">{t[field as keyof typeof t] as string}</label>
+                <label className="text-sm font-semibold mb-1">{t[field as keyof typeof t]}</label>
                 <input
                   type="number"
                   disabled={isAnswered}
@@ -313,9 +318,9 @@ export default function MathGame() {
           </>
         )}
 
-        {puzzle.interaction_type === 'multiple_choice' && (
+        {puzzle?.interaction_type === 'multiple_choice' && (
           <div className="w-full space-y-3">
-            {puzzle.options.map((opt: any) => (
+            {puzzle.options?.map((opt: any) => (
               <button
                 key={opt.id}
                 disabled={isAnswered}
@@ -332,7 +337,7 @@ export default function MathGame() {
           </div>
         )}
 
-        {puzzle.interaction_type === 'single_input' && (
+        {puzzle?.interaction_type === 'single_input' && (
           <div className={`w-full flex flex-col items-center ${themeStyles.card} p-4 rounded-xl border`}>
              <input
               type="number"
@@ -349,9 +354,9 @@ export default function MathGame() {
           <button 
             onClick={checkAnswer} 
             disabled={
-              (puzzle.interaction_type === 'multi_input_animals' && (!inputAnswers.chickens || !inputAnswers.ducks || !inputAnswers.rabbits)) ||
-              (puzzle.interaction_type === 'multiple_choice' && !selectedChoice) ||
-              (puzzle.interaction_type === 'single_input' && !singleInput)
+              (puzzle?.interaction_type === 'multi_input_animals' && (!inputAnswers.chickens || !inputAnswers.ducks || !inputAnswers.rabbits)) ||
+              (puzzle?.interaction_type === 'multiple_choice' && !selectedChoice) ||
+              (puzzle?.interaction_type === 'single_input' && !singleInput)
             }
             className={`w-full ${themeStyles.primaryBtn} font-bold py-3 rounded-xl mt-6 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed`}
           >
