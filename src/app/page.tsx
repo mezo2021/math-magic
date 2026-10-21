@@ -8,73 +8,6 @@ import { usePlayerStore } from '@/lib/usePlayerStore';
 import { ALL_ACHIEVEMENTS } from '@/lib/store';
 import { translations } from '@/lib/i18n';
 
-// 🎨 مجسم شخصية فانيليانا (تضحك وممسكة بطرف كلمة سحر)
-const VanellopeCharacter = () => (
-  <div className="relative w-16 h-20 md:w-20 md:h-24 inline-block align-middle animate-bounce duration-1000 -mr-2">
-    <svg viewBox="0 0 100 120" className="w-full h-full drop-shadow-[0_0_12px_rgba(236,72,153,0.8)]">
-      {/* شعر فانيليانا وربطة الحلوى */}
-      <path d="M25,45 Q10,20 50,8 Q90,20 75,45 Q85,30 92,40 Q95,60 80,65 Z" fill="#1e1b4b" />
-      {/* ربطة شعر حمراء/وردي */}
-      <ellipse cx="78" cy="38" rx="8" ry="5" fill="#f43f5e" />
-      <circle cx="84" cy="35" r="3" fill="#38bdf8" />
-      <circle cx="73" cy="42" r="2" fill="#facc15" />
-      
-      {/* الوجه */}
-      <ellipse cx="50" cy="50" rx="28" ry="24" fill="#fde047" opacity="0.2" />
-      <ellipse cx="50" cy="50" rx="26" ry="22" fill="#fef08a" />
-      
-      {/* العيون الكبيرة المتلألئة (تضحك) */}
-      <ellipse cx="38" cy="46" rx="6" ry="8" fill="#065f46" />
-      <circle cx="40" cy="44" r="2.5" fill="#ffffff" />
-      <ellipse cx="62" cy="46" rx="6" ry="8" fill="#065f46" />
-      <circle cx="64" cy="44" r="2.5" fill="#ffffff" />
-      
-      {/* ابتسامة ضاحكة عريضة */}
-      <path d="M38,60 Q50,75 62,60 Z" fill="#be123c" />
-      <path d="M42,60 Q50,65 58,60 Z" fill="#ffffff" />
-
-      {/* اليدين (اليد اليسرى ممسكة بكلمة سحر) */}
-      <path d="M26,75 Q10,70 5,80" stroke="#fef08a" strokeWidth="7" strokeLinecap="round" fill="none" />
-      <path d="M74,75 Q90,70 98,82" stroke="#fef08a" strokeWidth="7" strokeLinecap="round" fill="none" />
-      
-      {/* هودي الأخضر/التركواز شهير لفانيليانا */}
-      <path d="M26,70 Q50,65 74,70 L80,110 Q50,115 20,110 Z" fill="#14b8a6" />
-      <path d="M45,70 L43,95 M55,70 L57,95" stroke="#f43f5e" strokeWidth="2.5" />
-    </svg>
-  </div>
-);
-
-// 🤖 مجسم شخصية المدمر Terminator (واقف على اليسار وممسك بكلمة الرياضيات)
-const TerminatorCharacter = () => (
-  <div className="relative w-16 h-20 md:w-20 md:h-24 inline-block align-middle animate-pulse -ml-2">
-    <svg viewBox="0 0 100 120" className="w-full h-full drop-shadow-[0_0_15px_rgba(6,182,212,0.9)]">
-      {/* الجمجمة الفولاذية والكتفين */}
-      <path d="M20,110 L25,70 L35,55 L65,55 L75,70 L80,110 Z" fill="#334155" stroke="#94a3b8" strokeWidth="2" />
-      <path d="M30,20 Q50,5 70,20 L78,50 Q50,65 22,50 Z" fill="#64748b" stroke="#cbd5e1" strokeWidth="2" />
-      
-      {/* تفاصيل معدنية سيبرانية */}
-      <rect x="35" y="12" width="30" height="6" fill="#475569" rx="2" />
-      <line x1="50" y1="20" x2="50" y2="45" stroke="#334155" strokeWidth="2" />
-
-      {/* العين الحمراء الليزرية المتوهجة (تأثير المنقذ/المدمر) */}
-      <circle cx="38" cy="35" r="6" fill="#1e293b" stroke="#06b6d4" strokeWidth="1.5" />
-      <circle cx="38" cy="35" r="3" fill="#06b6d4" />
-      
-      <circle cx="62" cy="35" r="7" fill="#000000" stroke="#ef4444" strokeWidth="2" />
-      <circle cx="62" cy="35" r="3.5" fill="#ef4444" className="animate-ping" />
-      <circle cx="62" cy="35" r="2" fill="#ffffff" />
-
-      {/* الفك والأسنان الفولاذية */}
-      <rect x="38" y="48" width="24" height="10" fill="#1e293b" stroke="#94a3b8" strokeWidth="1.5" />
-      <path d="M40,53 H60 M44,48 V58 M50,48 V58 M56,48 V58" stroke="#cbd5e1" strokeWidth="1.5" />
-
-      {/* الذراع الميكانيكية الممسكة بكلمة الرياضيات */}
-      <path d="M25,75 Q5,70 0,60" stroke="#94a3b8" strokeWidth="8" strokeLinecap="round" fill="none" />
-      <path d="M75,75 Q95,70 100,58" stroke="#64748b" strokeWidth="8" strokeLinecap="round" fill="none" />
-    </svg>
-  </div>
-);
-
 const AchievementToast = ({ achievement, text }: { achievement: string | null, text: string }) => {
   if (!achievement) return null;
   return (
@@ -127,15 +60,16 @@ export default function MathGame() {
 
   const themeStyles = {
     bg: isBarbie 
-      ? 'bg-gradient-to-br from-[#d946ef] via-[#831843] to-[#4c1d95] text-white' 
+      ? 'bg-gradient-to-br from-[#831843] via-[#4c1d95] to-[#2e1065] text-white' 
       : 'bg-gradient-to-br from-[#030712] via-[#0b1329] to-[#0f172a] text-white',
     card: isBarbie 
-      ? 'bg-black/10 backdrop-blur-xl border-2 border-pink-400/40 shadow-[0_0_25px_rgba(236,72,153,0.3)]' 
-      : 'bg-black/20 backdrop-blur-xl border-2 border-cyan-500/40 shadow-[0_0_25px_rgba(6,182,212,0.25)]',
-    inputBg: 'bg-transparent border-2 border-white/30 focus:border-white text-white placeholder-white/60',
+      ? 'bg-black/20 backdrop-blur-xl border-2 border-pink-500/40' 
+      : 'bg-black/30 backdrop-blur-xl border-2 border-cyan-500/30',
+    inputBg: 'bg-black/20 border-2 border-white/30 focus:border-white text-white placeholder-white/60',
+    // أزرار واضحة وبدون توهج يغطي على النص
     primaryBtn: isBarbie 
-      ? 'bg-gradient-to-r from-pink-500 via-fuchsia-500 to-cyan-400 hover:scale-105 active:scale-95 text-white shadow-[0_0_30px_rgba(236,72,153,0.6)] animate-pulse' 
-      : 'bg-gradient-to-r from-cyan-500 via-blue-600 to-indigo-600 hover:scale-105 active:scale-95 text-white shadow-[0_0_30px_rgba(6,182,212,0.5)] border border-cyan-300/40',
+      ? 'bg-pink-600 hover:bg-pink-500 text-white border-2 border-pink-400' 
+      : 'bg-blue-600 hover:bg-blue-500 text-white border-2 border-cyan-400',
     accentText: isBarbie ? 'text-pink-200' : 'text-cyan-300',
     headerBg: 'bg-transparent backdrop-blur-md border-b border-white/10',
   };
@@ -228,45 +162,22 @@ export default function MathGame() {
   // =====================================================================
   if (screen === 'menu') {
     return (
-      <div className={`min-h-screen flex flex-col items-center justify-center p-6 ${themeStyles.bg} transition-all duration-700 relative overflow-hidden`} dir={isRTL ? 'rtl' : 'ltr'}>
-        
-        {/* حركات أنيميشن إضاءة خلفية */}
-        {isBarbie ? (
-          <>
-            <div className="absolute top-[-10%] left-[-10%] w-[30rem] h-[30rem] bg-pink-500/30 rounded-full blur-[120px] pointer-events-none animate-ping duration-1000"></div>
-            <div className="absolute bottom-[-10%] right-[-10%] w-[30rem] h-[30rem] bg-cyan-400/30 rounded-full blur-[120px] pointer-events-none animate-pulse"></div>
-          </>
-        ) : (
-          <>
-            <div className="absolute top-[-10%] left-[-10%] w-[30rem] h-[30rem] bg-cyan-600/20 rounded-full blur-[120px] pointer-events-none animate-pulse"></div>
-            <div className="absolute bottom-[-10%] right-[-10%] w-[30rem] h-[30rem] bg-blue-700/25 rounded-full blur-[120px] pointer-events-none"></div>
-          </>
-        )}
-
+      <div className={`min-h-screen flex flex-col items-center justify-center p-6 ${themeStyles.bg} transition-all duration-500 relative overflow-hidden`} dir={isRTL ? 'rtl' : 'ltr'}>
         <AchievementToast achievement={toastAchievement} text={t.newAchievement} />
         
         <div className="absolute top-6 left-6 flex gap-3 z-10">
-          <button onClick={toggleTheme} className="px-5 py-2.5 rounded-2xl text-sm font-black bg-white/10 border-2 border-white/20 hover:bg-white/20 backdrop-blur-md transition-all shadow-lg">
-            🎨 {isBarbie ? 'Vanellope 🍬' : 'Terminator 🤖'}
+          <button onClick={toggleTheme} className="px-5 py-2.5 rounded-2xl text-sm font-black bg-white/10 border-2 border-white/20 hover:bg-white/20 backdrop-blur-md transition-all">
+            🎨 {isBarbie ? 'Barbie 🌸' : 'Terminator 🤖'}
           </button>
-          <button onClick={toggleLanguage} className="px-5 py-2.5 rounded-2xl text-sm font-black bg-white/10 border-2 border-white/20 hover:bg-white/20 backdrop-blur-md transition-all shadow-lg">
+          <button onClick={toggleLanguage} className="px-5 py-2.5 rounded-2xl text-sm font-black bg-white/10 border-2 border-white/20 hover:bg-white/20 backdrop-blur-md transition-all">
             🌐 {lang === 'ar' ? 'English' : 'عربي'}
           </button>
         </div>
 
-        {/* 🌟 العنوان الرائع الممسوك بالشخصيات 🌟 */}
-        <div className="flex items-center justify-center my-4 z-10 select-none">
-          {/* شخصية فانيليانا تمسك بكلمة "سحر" في ثيم باربي */}
-          {isBarbie && <VanellopeCharacter />}
-
-          <h1 className={`text-5xl md:text-7xl font-black text-transparent bg-clip-text bg-gradient-to-r ${isBarbie ? 'from-pink-200 via-fuchsia-100 to-cyan-300' : 'from-cyan-300 via-blue-200 to-indigo-300'} text-center drop-shadow-[0_10px_25px_rgba(0,0,0,0.6)] tracking-wide flex items-center gap-1`}>
-            <span>{lang === 'ar' ? 'سحر' : 'Math'}</span>
-            <span>{lang === 'ar' ? 'الرياضيات' : 'Magic'}</span>
-          </h1>
-
-          {/* شخصية المدمر يمسك بكلمة "الرياضيات" في ثيم الأزرق */}
-          {!isBarbie && <TerminatorCharacter />}
-        </div>
+        {/* العنوان الرئيسي النظيف والتأثير المتدرج الواضح */}
+        <h1 className={`text-5xl md:text-7xl font-black text-transparent bg-clip-text bg-gradient-to-r ${isBarbie ? 'from-pink-200 to-purple-300' : 'from-cyan-300 to-blue-200'} mb-4 text-center my-6`}>
+          {t.appTitle}
+        </h1>
 
         <p className="text-white/90 mb-8 text-center text-lg font-bold">{t.highestScore} <span className="text-yellow-300 font-black text-2xl">{player.progress?.highestScore || 0}</span></p>
         
@@ -285,11 +196,13 @@ export default function MathGame() {
             const newName = e.target.value;
             updatePlayer(prev => ({ ...prev, profile: { ...prev.profile, name: newName } }));
           }}
-          className={`mb-8 ${themeStyles.inputBg} p-5 rounded-3xl text-center w-full max-w-md focus:outline-none text-2xl font-black placeholder-white/50 shadow-2xl backdrop-blur-md`}
+          className={`mb-8 ${themeStyles.inputBg} p-5 rounded-3xl text-center w-full max-w-md focus:outline-none text-2xl font-black placeholder-white/50 backdrop-blur-md`}
         />
 
-        <button onClick={startGame} className={`w-full max-w-md ${themeStyles.primaryBtn} p-6 rounded-3xl flex items-center justify-center gap-4 text-3xl font-black mb-10 transition-transform`}>
-          <span className="text-4xl">🧠</span> {activeChallenge ? t.acceptChallenge : t.startChallenge}
+        {/* زر ابدأ التحدي بالنص الناصع والواضح جداً */}
+        <button onClick={startGame} className={`w-full max-w-md ${themeStyles.primaryBtn} p-6 rounded-3xl flex items-center justify-center gap-4 text-3xl font-black mb-10 transition-transform active:scale-95 shadow-xl`}>
+          <span className="text-4xl">🧠</span> 
+          <span className="text-white drop-shadow-md">{activeChallenge ? t.acceptChallenge : t.startChallenge}</span>
         </button>
 
         <div className={`w-full max-w-md ${themeStyles.card} p-6 rounded-3xl`}>
