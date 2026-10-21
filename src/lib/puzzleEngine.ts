@@ -1,93 +1,88 @@
+// src/lib/puzzleEngine.ts
+
 export type InteractionType = 'multi_input_animals' | 'multiple_choice' | 'single_input';
 
 export interface Puzzle {
-  challenge_id: number;
+  id: string;
   puzzle_type: 'farm' | 'distance' | 'sequence';
   interaction_type: InteractionType;
   params: any;
-  options: { id: string; value: number }[];
+  options?: { id: string; value: number }[];
+  correct_answer: any; 
 }
 
-function seededRandom(seed: number) {
-  let s = seed;
-  return function() {
-    s = Math.sin(s) * 10000;
-    return s - Math.floor(s);
-  };
-}
+export const generatePuzzle = (lang: 'ar' | 'en'): Puzzle => {
+  const type = Math.floor(Math.random() * 3);
 
-const getRange = (rng: () => number, min: number, max: number) => {
-  return Math.floor(rng() * (max - min + 1)) + min;
-};
-
-export const generatePuzzle = (seed: number): Puzzle => {
-  const rng = seededRandom(seed);
-  const puzzleType = getRange(rng, 0, 2);
-
-  if (puzzleType === 0) {
-    const rabbits = getRange(rng, 2, 8);
-    const chickens = getRange(rng, 5, 15);
-    const ducks = getRange(rng, 2, 8);
-    const totalHeads = rabbits + chickens + ducks;
-    const totalLegs = (rabbits * 4) + (chickens * 2) + (ducks * 2);
+  if (type === 0) {
+    // 🐇 لغز منسا للمزرعة (نطابق النص: البط نصف الدجاج، الأرانب ربع البط)
+    // نفرض الأرانب = R. إذن البط = 4R، الدجاج = 8R. المفقود = 3R.
+    const rabbits = Math.floor(Math.random() * 4) + 1; // من 1 إلى 4
+    const ducks = rabbits * 4;
+    const chickens = rabbits * 8;
+    const missing = rabbits * 3;
 
     return {
-      challenge_id: seed,
+      id: `farm_${Date.now()}`,
       puzzle_type: 'farm',
       interaction_type: 'multi_input_animals',
-      params: { totalHeads, totalLegs },
-      options: []
+      params: { missing },
+      correct_answer: { chickens, ducks, rabbits }
     };
-  } else if (puzzleType === 1) {
-    const distance = getRange(rng, 15, 50);
+  }
+
+  if (type === 1) {
+    // 🚗 لغز المسافة (الفخ)
+    const distance = Math.floor(Math.random() * 30) + 20; // 20-50 كم
+    
+    // نخلط الخيارات (نضع المسافة الصحيحة، والمضاعفات كفخاخ)
     const options = [
       { id: "A", value: distance * 2 },
       { id: "B", value: distance },
       { id: "C", value: 0 },
-      { id: "D", value: distance * 4 },
-    ];
+      { id: "D", value: distance * 4 }
+    ].sort(() => Math.random() - 0.5);
+
+    const correctOptionId = options.find(o => o.value === distance)?.id;
 
     return {
-      challenge_id: seed,
+      id: `dist_${Date.now()}`,
       puzzle_type: 'distance',
       interaction_type: 'multiple_choice',
       params: { distance },
-      options
-    };
-  } else {
-    const start = getRange(rng, 1, 10);
-    const step = getRange(rng, 2, 6);
-    const seq = [0, 1, 2, 3, 4].map(i => start + i * step);
-
-    return {
-      challenge_id: seed,
-      puzzle_type: 'sequence',
-      interaction_type: 'single_input',
-      params: { seq },
-      options: []
+      options,
+      correct_answer: { choice: correctOptionId }
     };
   }
+
+  // 🔢 لغز المتتالية
+  const start = Math.floor(Math.random() * 10) + 1;
+  const step = Math.floor(Math.random() * 5) + 2;
+  const seq = [start, start + step, start + step * 2, start + step * 3, start + step * 4];
+  const correctValue = start + step * 5;
+
+  return {
+    id: `seq_${Date.now()}`,
+    puzzle_type: 'sequence',
+    interaction_type: 'single_input',
+    params: { seq },
+    correct_answer: { value: correctValue }
+  };
 };
 
-export const validateAnswer = (seed: number, answer: any): boolean => {
-  const rng = seededRandom(seed);
-  const puzzleType = getRange(rng, 0, 2);
-
-  if (puzzleType === 0) {
-    const rabbits = getRange(rng, 2, 8);
-    const chickens = getRange(rng, 5, 15);
-    const ducks = getRange(rng, 2, 8);
+export const validateAnswer = (puzzle: Puzzle, answer: any): boolean => {
+  if (puzzle.interaction_type === 'multi_input_animals') {
     return (
-      Number(answer.chickens) === chickens &&
-      Number(answer.ducks) === ducks &&
-      Number(answer.rabbits) === rabbits
+      Number(answer.chickens) === puzzle.correct_answer.chickens &&
+      Number(answer.ducks) === puzzle.correct_answer.ducks &&
+      Number(answer.rabbits) === puzzle.correct_answer.rabbits
     );
-  } else if (puzzleType === 1) {
-    return answer.choice === "B";
-  } else {
-    const start = getRange(rng, 1, 10);
-    const step = getRange(rng, 2, 6);
-    const correct = start + 5 * step;
-    return Number(answer.value) === correct;
   }
+  if (puzzle.interaction_type === 'single_input') {
+    return Number(answer.value) === puzzle.correct_answer.value;
+  }
+  if (puzzle.interaction_type === 'multiple_choice') {
+    return answer.choice === puzzle.correct_answer.choice;
+  }
+  return false;
 };
