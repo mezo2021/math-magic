@@ -1,120 +1,97 @@
 use wasm_bindgen::prelude::*;
 use serde::{Serialize, Deserialize};
-use rand::Rng;
+use rand::{Rng, SeedableRng};
+use rand_chacha::ChaCha8Rng; 
+use serde_json::json;
 
 #[derive(Serialize, Deserialize)]
-pub struct PuzzleConfig {
-    pub inputs: Vec<InputConfig>,
-}
-
-#[derive(Serialize, Deserialize)]
-pub struct InputConfig {
-    pub name: String,
-    pub label: String,
-    pub icon: String,
-    pub placeholder: String,
-}
-
-#[derive(Serialize, Deserialize)]
-pub struct Puzzle {
-    pub id: String,
-    pub category: String,
+pub struct PuzzlePublic {
+    pub challenge_id: u64,
     pub title: String,
-    pub prompt: String,
-    pub interaction_type: String,
-    pub config: PuzzleConfig,
-    pub correct_answer: serde_json::Value,
-    pub explanation: String,
+    pub description: String,
+    pub interaction_type: String, // "multi_input" أو "multiple_choice"
+    pub constraints: Vec<serde_json::Value>, 
+    pub options: Vec<serde_json::Value>, // للخيارات المتعددة
 }
 
-// 1. مولد لغز مزرعة الحيوانات (توليد عكسي مُحصّن ضد التناقض)
 #[wasm_bindgen]
-pub fn generate_animal_puzzle() -> JsValue {
-    let mut rng = rand::thread_rng();
-
-    // التوليد العكسي الآمن: نختار الدجاج أولاً (من 4 إلى 8)
-    let chickens: u32 = rng.gen_range(4..=8);
+pub fn generate_puzzle(seed: u64) -> JsValue {
+    let mut rng = ChaCha8Rng::seed_from_u64(seed);
     
-    // نجبر البط على أن يكون أقل من الدجاج (من 1 إلى الدجاج - 1)
-    let ducks: u32 = rng.gen_range(1..chickens);
-    
-    let rabbits: u32 = rng.gen_range(1..=4);
+    // اختيار نوع اللغز عشوائياً (0 = مزرعة، 1 = مسافة)
+    let puzzle_type = rng.gen_range(0..2);
 
-    // الآن الفرق سيكون موجباً دائماً، والنص سيطابق الواقع
-    let diff_duck_chicken = chickens - ducks; 
-    let sum_chicken_rabbit = chickens + rabbits;
-    let total_legs = (chickens * 2) + (ducks * 2) + (rabbits * 4);
+    if puzzle_type == 0 {
+        // --- لغز المزرعة (المنطق الجبري) ---
+        let c = rng.gen_range(2..=10);
+        let mut d = rng.gen_range(2..=10);
+        while d == c { d = rng.gen_range(2..=10); }
+        let r = rng.gen_range(1..=6);
 
-    let prompt = format!(
-        "في مزرعة ذكية تضم دجاجاً، بطاً، وأرانب:\n\
-         • عدد الدجاج يزيد عن عدد البط بمقدار {}.\n\
-         • مجموع عدد الدجاج والأرانب يساوي {}.\n\
-         • إجمالي عدد الأرجل لكل الحيوانات هو {} رجلاً.\n\
-         فما هو عدد كل حيوان بدقة؟",
-        diff_duck_chicken, sum_chicken_rabbit, total_legs
-    );
+        let constraints = vec![
+            json!({"type": "DIFF", "value": (c as i32 - d as i32).abs()}),
+            json!({"type": "SUM", "value": c + r}),
+            json!({"type": "WEIGHTED_SUM", "value": (c*2 + d*2 + r*4)})
+        ];
 
-    let puzzle = Puzzle {
-        id: format!("animal_{}", rng.gen::<u64>()),
-        category: "المنطق الجبري".to_string(),
-        title: "لغز المزرعة الذكية".to_string(),
-        prompt,
-        interaction_type: "multi_input".to_string(),
-        config: PuzzleConfig {
-            inputs: vec![
-                InputConfig { name: "chickens".into(), label: "الدجاج".into(), icon: "🐔".into(), placeholder: "عدد الدجاج".into() },
-                InputConfig { name: "ducks".into(), label: "البط".into(), icon: "🦆".into(), placeholder: "عدد البط".into() },
-                InputConfig { name: "rabbits".into(), label: "الأرانب".into(), icon: "🐇".into(), placeholder: "عدد الأرانب".into() },
-            ],
-        },
-        correct_answer: serde_json::json!({
-            "chickens": chickens,
-            "ducks": ducks,
-            "rabbits": rabbits
-        }),
-        explanation: format!(
-            "الحل الصحيح الوحيد: الدجاج = {}، البط = {}، الأرانب = {}.\n\
-             التحقق: ({}×2) + ({}×2) + ({}×4) = {} رجلاً.",
-            chickens, ducks, rabbits, chickens, ducks, rabbits, total_legs
-        ),
-    };
+        let puzzle = PuzzlePublic {
+            challenge_id: seed,
+            title: "لغز المزرعة".to_string(),
+            description: "اكتشف عدد الحيوانات بناءً على القيود:".to_string(),
+            interaction_type: "multi_input".to_string(),
+            constraints,
+            options: vec![],
+        };
+        serde_wasm_bindgen::to_value(&puzzle).unwrap()
+    } else {
+        // --- لغز الفخ المنطقي (المسافة) ---
+        let distance = rng.gen_range(15..=50);
+        
+        let prompt = format!("المسافة بين مدينتي الكويت والأحمدي {} كم. إذا قطعتها مرتين ذهاباً وإياباً، فكم تكون المسافة بين البلدين؟", distance);
+        
+        // خلط الخيارات
+        let mut options = vec![
+            json!({"id": "A", "text": format!("{} كم", distance * 2)}),
+            json!({"id": "B", "text": format!("{} كم", distance)}), // الإجابة الصحيحة
+            json!({"id": "C", "text": "صفر"}),
+            json!({"id": "D", "text": format!("{} كم", distance * 4)}),
+        ];
+        // (سنترك الترتيب ثابتاً في هذا المثال لضمان الاستقرار، ولكن يمكن خلطها لاحقاً)
 
-    serde_wasm_bindgen::to_value(&puzzle).unwrap()
-}
-
-// 2. مولد لغز السلاسل العددية (كما هو)
-#[wasm_bindgen]
-pub fn generate_sequence_puzzle() -> JsValue {
-    let mut rng = rand::thread_rng();
-
-    let start: i32 = rng.gen_range(1..=5);
-    let step: i32 = rng.gen_range(2..=4);
-
-    let mut seq = vec![start];
-    let mut current = start;
-
-    for i in 1..=4 {
-        current += step + (i * 2);
-        seq.push(current);
+        let puzzle = PuzzlePublic {
+            challenge_id: seed,
+            title: "الفخ المنطقي".to_string(),
+            description: prompt,
+            interaction_type: "multiple_choice".to_string(),
+            constraints: vec![],
+            options,
+        };
+        serde_wasm_bindgen::to_value(&puzzle).unwrap()
     }
+}
 
-    let correct_answer = current + step + (5 * 2);
+#[wasm_bindgen]
+pub fn validate_answer(seed: u64, answer: JsValue) -> bool {
+    let mut rng = ChaCha8Rng::seed_from_u64(seed);
+    let puzzle_type = rng.gen_range(0..2);
 
-    let prompt = format!(
-        "اكتشف النمط الرياضي وأوجد الرقم المفقود:\n{}, {}, {}, {}, {}, ؟",
-        seq[0], seq[1], seq[2], seq[3], seq[4]
-    );
+    let ans: serde_json::Value = serde_wasm_bindgen::from_value(answer).unwrap();
 
-    let puzzle = Puzzle {
-        id: format!("seq_{}", rng.gen::<u64>()),
-        category: "الذكاء العددي".to_string(),
-        title: "سلسلة الأرقام".to_string(),
-        prompt,
-        interaction_type: "single_input".to_string(),
-        config: PuzzleConfig { inputs: vec![] },
-        correct_answer: serde_json::json!(correct_answer),
-        explanation: format!("القاعدة تعتمد على إضافة فروق متزايدة بمقدار 2. الرقم المفقود هو {}.", correct_answer),
-    };
+    if puzzle_type == 0 {
+        // التحقق من المزرعة
+        let c = rng.gen_range(2..=10);
+        let mut d = rng.gen_range(2..=10);
+        while d == c { d = rng.gen_range(2..=10); }
+        let r = rng.gen_range(1..=6);
 
-    serde_wasm_bindgen::to_value(&puzzle).unwrap()
+        let u_c = ans["chickens"].as_i64().unwrap_or(0);
+        let u_d = ans["ducks"].as_i64().unwrap_or(0);
+        let u_r = ans["rabbits"].as_i64().unwrap_or(0);
+
+        (u_c as i32 == c) && (u_d as i32 == d) && (u_r as i32 == r)
+    } else {
+        // التحقق من المسافة (الإجابة الصحيحة هي الخيار B)
+        let u_choice = ans["choice"].as_str().unwrap_or("");
+        u_choice == "B"
+    }
 }
