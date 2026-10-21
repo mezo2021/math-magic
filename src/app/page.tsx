@@ -33,9 +33,10 @@ export default function MathGame() {
   const [currentRoundScore, setCurrentRoundScore] = useState(0);
   const [questionsAnswered, setQuestionsAnswered] = useState(0);
   
-  // حالة الإجابات
+  // حالات الإدخال
   const [inputAnswers, setInputAnswers] = useState<any>({});
   const [selectedChoice, setSelectedChoice] = useState<string | null>(null);
+  const [singleInput, setSingleInput] = useState<string>('');
   
   const [isAnswered, setIsAnswered] = useState(false);
   const [isCorrect, setIsCorrect] = useState(false);
@@ -90,6 +91,7 @@ export default function MathGame() {
     setPuzzle(newPuzzle);
     setInputAnswers({});
     setSelectedChoice(null);
+    setSingleInput('');
     setIsAnswered(false);
     setIsCorrect(false);
   };
@@ -99,10 +101,12 @@ export default function MathGame() {
     setIsAnswered(true);
 
     let answerPayload = {};
-    if (puzzle.interaction_type === 'multi_input') {
+    if (puzzle.interaction_type === 'multi_input_animals') {
       answerPayload = inputAnswers;
-    } else {
+    } else if (puzzle.interaction_type === 'multiple_choice') {
       answerPayload = { choice: selectedChoice };
+    } else if (puzzle.interaction_type === 'single_input') {
+      answerPayload = { value: Number(singleInput) };
     }
 
     const correct = wasm.validate_answer(seed, answerPayload);
@@ -262,23 +266,10 @@ export default function MathGame() {
       <main className="flex-1 flex flex-col items-center p-4 max-w-md mx-auto w-full mt-4">
         <div className={`w-full ${themeStyles.card} p-6 rounded-2xl border shadow-xl mb-6`}>
           <p className="text-slate-200 mb-4 whitespace-pre-line text-center">{puzzle.description}</p>
-          
-          {/* عرض القيود للغز المزرعة */}
-          {puzzle.interaction_type === 'multi_input' && (
-            <ul className={`list-disc list-inside space-y-2 ${themeStyles.accentText} text-sm`}>
-              {puzzle.constraints.map((c: any, i: number) => (
-                <li key={i}>
-                  {c.type === 'DIFF' ? `الفرق بين الدجاج والبط هو ${Math.abs(c.value)}.` : 
-                   c.type === 'SUM' ? `مجموع عدد الدجاج والأرانب يساوي ${c.value}.` : 
-                   c.type === 'WEIGHTED_SUM' ? `إجمالي عدد الأرجل هو ${c.value} رجلاً.` : ''}
-                </li>
-              ))}
-            </ul>
-          )}
         </div>
 
-        {/* حقل الإدخال للغز المزرعة */}
-        {puzzle.interaction_type === 'multi_input' && (
+        {/* 1. خانات الحيوانات (لغز المزرعة) */}
+        {puzzle.interaction_type === 'multi_input_animals' && (
           <>
             {['chickens', 'ducks', 'rabbits'].map(field => (
               <div key={field} className={`w-full mb-3 flex flex-col items-center ${themeStyles.card} p-3 rounded-xl border`}>
@@ -298,7 +289,7 @@ export default function MathGame() {
           </>
         )}
 
-        {/* أزرار الاختيار للغز الفخ المنطقي */}
+        {/* 2. أزرار الاختيار (لغز المسافة) */}
         {puzzle.interaction_type === 'multiple_choice' && (
           <div className="w-full space-y-3">
             {puzzle.options.map((opt: any) => (
@@ -318,10 +309,29 @@ export default function MathGame() {
           </div>
         )}
 
+        {/* 3. حقل الإدخال الواحد (لغز المتتاليات) */}
+        {puzzle.interaction_type === 'single_input' && (
+          <div className={`w-full flex flex-col items-center ${themeStyles.card} p-4 rounded-xl border`}>
+            <label className="text-sm font-semibold mb-2">اكتب الرقم المفقود:</label>
+            <input
+              type="number"
+              disabled={isAnswered}
+              placeholder="0"
+              value={singleInput}
+              onChange={(e) => setSingleInput(e.target.value)}
+              className="w-full text-center bg-black/30 border border-slate-600 rounded-lg p-4 text-2xl font-bold text-white focus:outline-none focus:border-current"
+            />
+          </div>
+        )}
+
         {!isAnswered && (
           <button 
             onClick={checkAnswer} 
-            disabled={puzzle.interaction_type === 'multi_input' ? (!inputAnswers.chickens || !inputAnswers.ducks || !inputAnswers.rabbits) : !selectedChoice}
+            disabled={
+              (puzzle.interaction_type === 'multi_input_animals' && (!inputAnswers.chickens || !inputAnswers.ducks || !inputAnswers.rabbits)) ||
+              (puzzle.interaction_type === 'multiple_choice' && !selectedChoice) ||
+              (puzzle.interaction_type === 'single_input' && !singleInput)
+            }
             className={`w-full ${themeStyles.primaryBtn} font-bold py-3 rounded-xl mt-6 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed`}
           >
             تحقق من الإجابة
