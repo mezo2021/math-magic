@@ -15,19 +15,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       
-      - name: Set up Rust
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: wasm32-unknown-unknown
-          
-      - name: Install wasm-pack
-        uses: jetli/wasm-pack-action@v0.4.0
-        
-      - name: Build Rust WASM into public
-        run: |
-          mkdir -p public
-          wasm-pack build --target web --out-dir public
-          
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
