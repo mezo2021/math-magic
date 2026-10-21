@@ -41,8 +41,8 @@ export default function MathGame() {
   const [isAnswered, setIsAnswered] = useState(false);
   const [isCorrect, setIsCorrect] = useState(false);
   
-  // 🆕 حالة جديدة لاصطياد فشل توليد اللغز
-  const [generationError, setGenerationError] = useState(false);
+  // 🆕 تغيير النوع ليقبل نصوص الأخطاء
+  const [generationError, setGenerationError] = useState<string | null>(null);
 
   const [activeChallenge, setActiveChallenge] = useState<ChallengeData | null>(null);
   const [toastAchievement, setToastAchievement] = useState<string | null>(null);
@@ -54,8 +54,9 @@ export default function MathGame() {
         const module = await loadMathEngine();
         setWasm(module);
         setIsWasmReady(true);
-      } catch (e) {
+      } catch (e: any) {
         setWasmError(true);
+        console.error("WASM Load Error:", e);
       }
     }
     initEngine();
@@ -70,7 +71,6 @@ export default function MathGame() {
 
   if (!isMounted || !player) return <div className="min-h-screen bg-slate-900 flex items-center justify-center text-white">جاري التحميل... ⏳</div>;
 
-  // 🛡️ الحماية من البيانات القديمة (Fallbacks)
   const lang = player.preferences?.language || 'ar';
   const t = translations[lang] || translations['ar'];
   const isBarbie = player.preferences?.theme === 'barbie';
@@ -85,38 +85,35 @@ export default function MathGame() {
   };
 
   const generateNewPuzzle = () => {
-  if (!isWasmReady || !wasm) return;
-  setGenerationError(false); 
-  
-  try {
-    // 🆕 1. فحص هل الدالة موجودة أصلاً في ملف الـ WASM
-    if (typeof wasm.generate_puzzle !== 'function') {
-      throw new Error("الدالة generate_puzzle غير موجودة في ملف الـ WASM! تأكد من عمل Build صحيح.");
-    }
-
-    // 🆕 2. تجربة Seed ثابت مؤقتاً لمعرفة إذا كان العشوائي هو سبب المشكلة
-    const newSeed = 12345; // بدلاً من Math.floor(Math.random() * 1000000)
+    if (!isWasmReady || !wasm) return;
+    setGenerationError(null); 
     
-    console.log("⏳ جاري توليد اللغز بالـ Seed:", newSeed);
-    const newPuzzle = wasm.generate_puzzle(newSeed); 
-    console.log("✅ تم توليد اللغز بنجاح:", newPuzzle);
-    
-    if (!newPuzzle) {
-      throw new Error("المحرك أعاد قيمة فارغة (null/undefined).");
-    }
+    try {
+      if (typeof wasm.generate_puzzle !== 'function') {
+        throw new Error("الدالة generate_puzzle غير موجودة في ملف الـ WASM. تأكد من عمل Build صحيح.");
+      }
 
-    setSeed(newSeed);
-    setPuzzle(newPuzzle);
-    setInputAnswers({});
-    setSelectedChoice(null);
-    setSingleInput('');
-    setIsAnswered(false);
-    setIsCorrect(false);
-  } catch (error) {
-    console.error("🚨 WASM Generation Error:", error);
-    setGenerationError(true); 
-  }
-};
+      const newSeed = Math.floor(Math.random() * 1000000);
+      console.log("⏳ جاري توليد اللغز بالـ Seed:", newSeed);
+      const newPuzzle = wasm.generate_puzzle(newSeed); 
+      
+      if (!newPuzzle) {
+        throw new Error("المحرك أعاد قيمة فارغة (null/undefined). قد يكون هناك خطأ في كود Rust.");
+      }
+
+      setSeed(newSeed);
+      setPuzzle(newPuzzle);
+      setInputAnswers({});
+      setSelectedChoice(null);
+      setSingleInput('');
+      setIsAnswered(false);
+      setIsCorrect(false);
+    } catch (error: any) {
+      console.error("🚨 WASM Generation Error:", error);
+      // 🆕 عرض نص الخطأ على الشاشة
+      setGenerationError(error.message || String(error));
+    }
+  };
 
   const startGame = () => {
     setCurrentRoundScore(0);
@@ -279,18 +276,21 @@ export default function MathGame() {
     );
   }
 
-  // 🛡️ حماية شاشة اللغز من الانهيار أو التعليق الأبدي
+  // 🛡️ شاشة عرض الخطأ (الآن تعرض النص الحقيقي للخطأ)
   if (screen === 'puzzle' && !puzzle) {
     if (generationError) {
       return (
         <div className={`min-h-screen flex flex-col items-center justify-center ${themeStyles.bg} p-6 text-center`} dir={isRTL ? 'rtl' : 'ltr'}>
           <div className="text-6xl mb-4">💥</div>
           <h1 className="text-2xl font-bold mb-4">{lang === 'ar' ? 'فشل توليد اللغز' : 'Puzzle generation failed'}</h1>
-          <p className="text-slate-400 mb-6 max-w-sm">
-            {lang === 'ar' 
-              ? 'حدث خطأ داخلي في محرك Rust (قد يكون WASM قديماً أو هناك حلقة لا نهائية). يرجى إعادة المحاولة أو العودة للقائمة.' 
-              : 'WASM engine error (outdated build or infinite loop). Please retry or go back.'}
-          </p>
+          
+          {/* 🆕 عرض نص الخطأ هنا */}
+          <div className="bg-black/50 border border-red-500/50 p-4 rounded-xl mb-6 w-full max-w-md overflow-auto text-left" dir="ltr">
+            <code className="text-red-400 font-mono text-sm break-words">
+              {generationError}
+            </code>
+          </div>
+
           <div className="flex gap-4">
             <button onClick={generateNewPuzzle} className={`${themeStyles.primaryBtn} px-6 py-3 rounded-xl font-bold`}>
               {lang === 'ar' ? 'إعادة المحاولة 🔄' : 'Retry 🔄'}
