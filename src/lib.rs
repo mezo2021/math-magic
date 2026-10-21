@@ -7,8 +7,8 @@ use serde_json::json;
 #[derive(Serialize, Deserialize)]
 pub struct PuzzlePublic {
     pub challenge_id: u64,
-    pub title: String,
-    pub description: String,
+    pub puzzle_type: String, // "farm", "distance", "sequence"
+    pub params: serde_json::Value, // الأرقام فقط
     pub interaction_type: String,
     pub options: Vec<serde_json::Value>, 
 }
@@ -16,73 +16,50 @@ pub struct PuzzlePublic {
 #[wasm_bindgen]
 pub fn generate_puzzle(seed: u64) -> JsValue {
     let mut rng = ChaCha8Rng::seed_from_u64(seed);
-    
-    // اختيار نوع اللغز: 0 = مزرعة، 1 = مسافة، 2 = متتالية
     let puzzle_type = rng.gen_range(0..3);
 
     if puzzle_type == 0 {
-        // --- 1. لغز المزرعة (نصف وربع) ---
         let base_ducks = (rng.gen_range(1..=4)) * 4; 
         let chickens = base_ducks * 2;
         let rabbits = base_ducks / 4;
         let missing_chickens = chickens - (base_ducks + rabbits);
 
-        let prompt = format!(
-            "هل يمكنك استنباط عدد البط والدجاج والأرانب في ضوء المعلومات التالية:\n\
-             أولاً: عدد البط = نصف عدد الدجاج.\n\
-             ثانياً: عدد الأرانب = ربع عدد البط.\n\
-             ثالثاً: مجموع عدد الأرانب والبط = عدد الدجاج ناقصاً منه {} دجاجات.",
-            missing_chickens
-        );
-
         let puzzle = PuzzlePublic {
             challenge_id: seed,
-            title: "لغز المزرعة (منسا)".to_string(),
-            description: prompt,
+            puzzle_type: "farm".to_string(),
+            params: json!({ "missing": missing_chickens }),
             interaction_type: "multi_input_animals".to_string(), 
             options: vec![],
         };
         serde_wasm_bindgen::to_value(&puzzle).unwrap()
     } else if puzzle_type == 1 {
-        // --- 2. لغز المسافة (الفخ المنطقي) ---
         let distance = rng.gen_range(15..=50);
-        let prompt = format!(
-            "المسافة بين مدينتي الكويت والأحمدي {} كم. إذا قطعتها مرتين ذهاباً وإياباً، فكم تكون المسافة بين البلدين؟", 
-            distance
-        );
         
+        // الخيارات كأرقام فقط (لتترجم الواجهة كلمة "كم" أو "km")
         let options = vec![
-            json!({"id": "A", "text": format!("{} كم", distance * 2)}),
-            json!({"id": "B", "text": format!("{} كم", distance)}), 
-            json!({"id": "C", "text": "صفر"}),
-            json!({"id": "D", "text": format!("{} كم", distance * 4)}),
+            json!({"id": "A", "value": distance * 2}),
+            json!({"id": "B", "value": distance}), 
+            json!({"id": "C", "value": 0}), // صفر
+            json!({"id": "D", "value": distance * 4}),
         ];
 
         let puzzle = PuzzlePublic {
             challenge_id: seed,
-            title: "الفخ المنطقي".to_string(),
-            description: prompt,
+            puzzle_type: "distance".to_string(),
+            params: json!({ "distance": distance }),
             interaction_type: "multiple_choice".to_string(),
             options,
         };
         serde_wasm_bindgen::to_value(&puzzle).unwrap()
     } else {
-        // --- 3. لغز المتتالية العددية ---
         let start: i32 = rng.gen_range(1..=10);
         let step: i32 = rng.gen_range(2..=6);
-        
         let seq: Vec<i32> = (0..5).map(|i| start + i * step).collect();
-        let correct_answer = start + 5 * step;
-
-        let prompt = format!(
-            "اكتشف النمط الرياضي وأوجد الرقم المفقود:\n{} ، {} ، {} ، {} ، {} ، ؟",
-            seq[0], seq[1], seq[2], seq[3], seq[4]
-        );
-
+        
         let puzzle = PuzzlePublic {
             challenge_id: seed,
-            title: "الذكاء العددي".to_string(),
-            description: prompt,
+            puzzle_type: "sequence".to_string(),
+            params: json!({ "seq": seq }),
             interaction_type: "single_input".to_string(),
             options: vec![],
         };
@@ -94,7 +71,6 @@ pub fn generate_puzzle(seed: u64) -> JsValue {
 pub fn validate_answer(seed: u64, answer: JsValue) -> bool {
     let mut rng = ChaCha8Rng::seed_from_u64(seed);
     let puzzle_type = rng.gen_range(0..3);
-
     let ans: serde_json::Value = serde_wasm_bindgen::from_value(answer).unwrap();
 
     if puzzle_type == 0 {
