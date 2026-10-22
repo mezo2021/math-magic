@@ -1,12 +1,11 @@
 /**
  * ==========================================
  * 📂 المسار: src/lib/puzzleEngine.ts
- * ⚙️ الوظيفة: محرك توليد الألغاز والتحقق من صحة الإجابات (قلب التطبيق).
+ * ⚙️ الوظيفة: محرك توليد الألغاز والتحقق من صحة الإجابات.
  * 📅 تاريخ التعديل: 2024-05-24
  * 🛠️ التعديلات: 
- * - إضافة نظام التدوير العادل (Round Robin) لضمان تنوع الأسئلة.
- * - تثبيت المعادلات الرياضية للغز المزرعة (حل فريد 100%).
- * - تحسين الخيارات العشوائية لألغاز المسافة والمتسلسلة.
+ * - إضافة لغز الأعمار (Age Puzzle) كنوع رابع.
+ * - تحويل تفاعل لغز الأعمار إلى (اختيار من متعدد) وتوليد خيارات خاطئة ذكية.
  * ==========================================
  */
 
@@ -19,7 +18,7 @@ export interface PuzzleOption {
 
 export interface Puzzle {
   id: string;
-  puzzle_type: 'farm' | 'distance' | 'sequence';
+  puzzle_type: 'farm' | 'distance' | 'sequence' | 'age';
   title: string;
   interaction_type: InteractionType;
   params: any;
@@ -38,12 +37,12 @@ function shuffleArray<T>(array: T[]): T[] {
 }
 
 // طابور لتخزين أنواع الألغاز ومنع التكرار العشوائي
-let puzzleQueue: ('farm' | 'distance' | 'sequence')[] = [];
+let puzzleQueue: ('farm' | 'distance' | 'sequence' | 'age')[] = [];
 
 export function generatePuzzle(lang: 'ar' | 'en'): Puzzle {
   // إعادة ملء الطابور عند فراغه لضمان المرور على جميع الأنواع
   if (puzzleQueue.length === 0) {
-    puzzleQueue = shuffleArray(['farm', 'distance', 'sequence', 'farm', 'sequence']);
+    puzzleQueue = shuffleArray(['farm', 'distance', 'sequence', 'age', 'age']);
   }
 
   const puzzleType = puzzleQueue.pop() || 'farm';
@@ -83,7 +82,36 @@ export function generatePuzzle(lang: 'ar' | 'en'): Puzzle {
       interaction_type: 'multiple_choice',
       params: { distance },
       options,
-      correct_answer: { choice: 'opt1' } // الخيار الأول قبل الخلط هو الإجابة الصحيحة دائماً
+      correct_answer: { choice: 'opt1' } // الإجابة الصحيحة
+    };
+  } else if (puzzleType === 'age') {
+    // 👴 لغز الأعمار (الاختيار من متعدد الذكي)
+    const years = Math.floor(Math.random() * 3) + 2; // 2, 3, أو 4 سنوات
+    const correctAge = years * 6; // الإجابة الصحيحة (18, 24, إلخ)
+    
+    // توليد 3 خيارات خاطئة ذكية
+    let distractors = new Set<number>();
+    while (distractors.size < 3) {
+      const offset = Math.floor(Math.random() * 6) + 1; // 1 to 6
+      const wrong = correctAge + (Math.random() > 0.5 ? offset : -offset);
+      if (wrong > 0 && wrong !== correctAge) {
+        distractors.add(wrong);
+      }
+    }
+    
+    const options = shuffleArray([
+      { id: 'opt1', value: correctAge },
+      ...Array.from(distractors).map((val, i) => ({ id: `dist_${i}`, value: val }))
+    ]);
+
+    return {
+      id: `age_${Date.now()}`,
+      puzzle_type: 'age',
+      title: 'لغز الأعمار',
+      interaction_type: 'multiple_choice', // تم تحويله لاختيار من متعدد
+      params: { years },
+      options,
+      correct_answer: { choice: 'opt1' }
     };
   } else {
     // 🔢 لغز المتسلسلة
@@ -113,6 +141,8 @@ export function validateAnswer(puzzle: Puzzle, answer: any): boolean {
       Number(answer.rabbits) === puzzle.correct_answer.rabbits
     );
   } else if (puzzle.puzzle_type === 'distance') {
+    return answer.choice === puzzle.correct_answer.choice;
+  } else if (puzzle.puzzle_type === 'age') {
     return answer.choice === puzzle.correct_answer.choice;
   } else if (puzzle.puzzle_type === 'sequence') {
     return Number(answer.value) === puzzle.correct_answer.value;
