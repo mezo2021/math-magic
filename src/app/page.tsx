@@ -4,9 +4,8 @@
  * ⚙️ الوظيفة: الشاشة الرئيسية وشاشة اللعب (الواجهة الأمامية).
  * 📅 تاريخ التعديل: 2024-05-24
  * 🛠️ التعديلات: 
- * - إضافة دعم "لغز الأعمار" (عرض السؤال، الحل، وتغيير شكل الخيارات).
- * - إضافة زر التلميح (Hint) الذي يظهر فقط في لغز الأعمار.
- * - ضمان استمرار عمل العدادات الذكية ومنع الانتقال التلقائي.
+ * - تصحيح تموضع نص الحل بإضافة whitespace-pre-line.
+ * - دعم لغز الأعمار وزر التلميح.
  * ==========================================
  */
 
@@ -50,7 +49,6 @@ export default function MathGame() {
   const [isCorrect, setIsCorrect] = useState(false);
   const [showSolution, setShowSolution] = useState(false);
   
-  // 🆕 حالة إظهار التلميح
   const [showHint, setShowHint] = useState(false);
   
   const [activeChallenge, setActiveChallenge] = useState<ChallengeData | null>(null);
@@ -100,7 +98,7 @@ export default function MathGame() {
     setIsAnswered(false);
     setIsCorrect(false);
     setShowSolution(false);
-    setShowHint(false); // إعادة ضبط التلميح
+    setShowHint(false);
   };
 
   const handleAnimalCounter = (delta: number) => {
@@ -297,7 +295,6 @@ export default function MathGame() {
           </p>
         </div>
 
-        {/* 💡 زر التلميح (يظهر فقط في لغز الأعمار) */}
         {puzzle?.puzzle_type === 'age' && !isAnswered && (
           <div className="w-full flex justify-end mb-4">
             <button 
@@ -309,14 +306,12 @@ export default function MathGame() {
           </div>
         )}
 
-        {/* 📜 نص التلميح */}
         {showHint && puzzle?.puzzle_type === 'age' && (
           <div className="w-full bg-yellow-500/10 border border-yellow-500/30 p-5 rounded-2xl mb-4 text-yellow-200 text-base font-bold leading-relaxed">
             {t.hint_age()}
           </div>
         )}
 
-        {/* 🐇 لغز المزرعة: العداد التفاعلي للأرانب فقط */}
         {puzzle?.interaction_type === 'multi_input_animals' && (
           <div className="w-full space-y-4">
             <div className={`w-full flex items-center justify-between ${themeStyles.card} p-4 rounded-3xl border-2`}>
@@ -354,7 +349,6 @@ export default function MathGame() {
           </div>
         )}
 
-        {/* 🚗 لغز المسافة والأعمار: الخيارات المتعددة */}
         {puzzle?.interaction_type === 'multiple_choice' && (
           <div className="w-full space-y-4">
             {puzzle.options?.map((opt: any) => (
@@ -368,14 +362,12 @@ export default function MathGame() {
                     : `${themeStyles.card} hover:bg-white/20`
                 }`}
               >
-                {/* إذا كان اللغز مسافة نضيف "كم"، وإذا كان أعماراً نضع الرقم فقط */}
                 {opt.value === 0 ? t.zero : (puzzle.puzzle_type === 'distance' ? `${opt.value} ${t.km}` : opt.value)}
               </button>
             ))}
           </div>
         )}
 
-        {/* 🔢 لغز المتسلسلة: الإدخال المباشر */}
         {puzzle?.interaction_type === 'single_input' && (
           <div className={`w-full flex flex-col items-center ${themeStyles.card} p-5 rounded-3xl`}>
              <input
@@ -409,9 +401,10 @@ export default function MathGame() {
               {isCorrect ? t.correctAnswer : t.wrongAnswer}
             </span>
             
+            {/* 🛠️ التعديل هنا: إضافة whitespace-pre-line وتعديل التموضع */}
             {showSolution && puzzle && (
-              <div className="bg-black/30 p-4 rounded-2xl border border-white/10 mb-6">
-                <p className="text-white text-base font-bold leading-relaxed text-right" dir={isRTL ? 'rtl' : 'ltr'}>
+              <div className="bg-black/30 p-5 rounded-2xl border border-white/10 mb-6 w-full">
+                <p className="text-white text-base font-bold leading-relaxed text-start whitespace-pre-line" dir={isRTL ? 'rtl' : 'ltr'}>
                   {puzzle.puzzle_type === 'farm' ? t.solution_farm(puzzle.correct_answer.rabbits) : 
                    puzzle.puzzle_type === 'distance' ? t.solution_distance(puzzle.params.distance) : 
                    puzzle.puzzle_type === 'sequence' ? t.solution_sequence(puzzle.correct_answer.value) : 
