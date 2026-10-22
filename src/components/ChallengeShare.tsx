@@ -2,21 +2,26 @@
  * ==========================================
  * 📂 المسار: src/components/ChallengeShare.tsx
  * ⚙️ الوظيفة: زر مشاركة التحدي عبر تطبيقات الهاتف (WhatsApp, Telegram) أو نسخ الرابط.
- * 📅 تاريخ الفحص: 2024-05-24
- * 🛠️ التعديلات: لا يوجد تعديل برمجي (الكود ممتاز ويستخدم Web Share API). تمت إضافة الوسم فقط.
+ * 📅 تاريخ التعديل: 2026-07-24
+ * 🛠️ التعديلات: 
+ * - استقبال اللغة (lang) كخاصية لدعم الترجمة.
+ * - استخدام دالة share_message من ملف i18n.
  * ==========================================
  */
+
 'use client';
 import React, { useState } from 'react';
 import { createChallengeToken } from '@/lib/challenge';
+import { translations } from '@/lib/i18n';
 
 interface Props {
   playerName: string;
   score: number;
   puzzleId: string;
+  lang: 'ar' | 'en'; // 🆕 إضافة اللغة
 }
 
-export default function ChallengeShare({ playerName, score, puzzleId }: Props) {
+export default function ChallengeShare({ playerName, score, puzzleId, lang }: Props) {
   const [copied, setCopied] = useState(false);
 
   const handleShare = () => {
@@ -27,14 +32,16 @@ export default function ChallengeShare({ playerName, score, puzzleId }: Props) {
       timestamp: Date.now(),
     });
 
-    // استبدل هذا بالمسار الصحيح إذا تغير
     const appUrl = "https://mezo2021.github.io/math-magic"; 
     const challengeUrl = `${appUrl}/?challenge=${token}`;
-    const shareText = `🧠 تحدي سحر الرياضيات!\nلقد حققت ${score} نقطة! هل تستطيع التغلب عليّ؟ 🏆\n\nاضغط على الرابط لقبول التحدي:\n${challengeUrl}`;
+    
+    // استخدام النص المترجم
+    const shareText = translations[lang].share_message(score, challengeUrl);
+    const shareTitle = lang === 'ar' ? 'تحدي سحر الرياضيات' : 'Math Magic Challenge';
 
     if (navigator.share) {
       navigator.share({
-        title: 'تحدي سحر الرياضيات',
+        title: shareTitle,
         text: shareText,
       }).catch(() => {});
     } else {
@@ -50,9 +57,13 @@ export default function ChallengeShare({ playerName, score, puzzleId }: Props) {
         onClick={handleShare}
         className="w-full bg-green-600 hover:bg-green-500 text-white font-bold py-3 px-6 rounded-xl shadow-lg flex items-center justify-center gap-2 transition-all"
       >
-        <span>📲 تحدَّ صديقاً عبر الواتساب</span>
+        <span>{lang === 'ar' ? '📲 تحدَّ صديقاً عبر الواتساب' : '📲 Challenge a friend'}</span>
       </button>
-      {copied && <span className="text-sm text-green-400">تم نسخ رابط التحدي للحافظة! 📋</span>}
+      {copied && (
+        <span className="text-sm text-green-400">
+          {lang === 'ar' ? 'تم نسخ رابط التحدي للحافظة! 📋' : 'Challenge link copied! 📋'}
+        </span>
+      )}
     </div>
   );
 }
