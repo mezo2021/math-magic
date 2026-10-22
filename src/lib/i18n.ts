@@ -4,7 +4,8 @@
  * ⚙️ الوظيفة: قاموس الترجمة (عربي/إنجليزي) ونصوص الألغاز والحلول.
  * 📅 تاريخ التعديل: 2024-05-24
  * 🛠️ التعديلات: 
- * - إضافة نصوص لغز الأعمار (age_template, solution_age, hint_age).
+ * - تصحيح معادلة لغز الأعمار لتوضيح (س) قبل النتيجة.
+ * - إضافة فواصل أسطر (\n) في نص الحل لتحسين التموضع.
  * ==========================================
  */
 
@@ -93,8 +94,9 @@ export const translations: Record<Language, TranslationSchema> = {
     solution_sequence: (value: number) => 
       `الحل: النمط هو إضافة رقم ثابت في كل مرة. الرقم المفقود هو ${value}.`,
 
+    // 🛠️ تم تصحيح المعادلة هنا وإضافة فواصل الأسطر
     solution_age: (age: number, years: number) => 
-      `الحل: نفرض العمر = س.\n• بعد ${years} سنوات: 3(س + ${years}) = 3س + ${3*years}\n• قبل ${years} سنوات: 3(س - ${years}) = 3س - ${3*years}\n• بالطرح: (3س + ${3*years}) - (3س - ${3*years}) = ${years*6}\nإذن العمر هو ${age} عاماً.`,
+      `الحل: نفرض العمر = س.\n• بعد ${years} سنوات: 3(س + ${years}) = 3س + ${3*years}\n• قبل ${years} سنوات: 3(س - ${years}) = 3س - ${3*years}\n• بالطرح: (3س + ${3*years}) - (3س - ${3*years}) = س\n• إذن: ${3*years + 3*years} = س\n• العمر هو ${age} عاماً.`,
 
     hint_age: () => 
       `تلميح: يمكنك تجربة الخيارات المعروضة ذهنياً في المعادلة لترى أي رقم يحققها. (أو فكر: طرح الأضعاف يلغي العمر نفسه ويترك فرق السنوات!).`,
@@ -149,7 +151,7 @@ export const translations: Record<Language, TranslationSchema> = {
       `Solution: The pattern is adding a constant number. The missing number is ${value}.`,
 
     solution_age: (age: number, years: number) => 
-      `Solution: Let age = x.\n• In ${years} years: 3(x + ${years}) = 3x + ${3*years}\n• ${years} years ago: 3(x - ${years}) = 3x - ${3*years}\n• Subtracting: (3x + ${3*years}) - (3x - ${3*years}) = ${years*6}\nSo the age is ${age}.`,
+      `Solution: Let age = x.\n• In ${years} years: 3(x + ${years}) = 3x + ${3*years}\n• ${years} years ago: 3(x - ${years}) = 3x - ${3*years}\n• Subtracting: (3x + ${3*years}) - (3x - ${3*years}) = x\n• So: ${3*years + 3*years} = x\n• The age is ${age}.`,
 
     hint_age: () =>
       `Hint: Try mentally testing the options in the equation, or notice that subtracting the multiples cancels the age, leaving the difference in years!`,
