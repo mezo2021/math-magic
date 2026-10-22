@@ -4,8 +4,7 @@
  * ⚙️ الوظيفة: قاموس الترجمة (عربي/إنجليزي) ونصوص الألغاز والحلول.
  * 📅 تاريخ التعديل: 2024-05-24
  * 🛠️ التعديلات: 
- * - إضافة واجهة TranslationSchema.
- * - إضافة نصوص شرح الحل (solution_farm, solution_distance, solution_sequence) المطابقة لكتاب منسا.
+ * - إضافة نصوص لغز الأعمار (age_template, solution_age, hint_age).
  * ==========================================
  */
 
@@ -30,14 +29,19 @@ export interface TranslationSchema {
   completedSession: string;
   theme: string;
   language: string;
+  hint: string;
   
   farm_template: (missing: number) => string;
   distance_template: (distance: number) => string;
   sequence_template: (seq: string) => string;
+  age_template: (years: number) => string;
 
   solution_farm: (rabbits: number) => string;
   solution_distance: (distance: number) => string;
   solution_sequence: (value: number) => string;
+  solution_age: (age: number, years: number) => string;
+
+  hint_age: () => string;
 
   chickens: string;
   ducks: string;
@@ -66,6 +70,7 @@ export const translations: Record<Language, TranslationSchema> = {
     completedSession: "لقد أكملت الجلسة.",
     theme: "الثيم",
     language: "اللغة",
+    hint: "💡 تلميح",
 
     farm_template: (missing: number) => 
       `في مزرعة ذكية تضم دجاجاً، بطاً، وأرانب:\n• عدد البط = نصف عدد الدجاج.\n• عدد الأرانب = ربع عدد البط.\n• مجموع عدد الأرانب والبط = عدد الدجاج ناقصاً منه ${missing} دجاجات.\nفما هو عدد كل حيوان بدقة؟`,
@@ -76,6 +81,9 @@ export const translations: Record<Language, TranslationSchema> = {
     sequence_template: (seq: string) => 
       `اكتشف النمط الرياضي وأوجد الرقم المفقود:\n${seq} ، ؟`,
 
+    age_template: (years: number) => 
+      `سُئِلَ شَخْصٌ عَنْ عُمْرِهِ فَقَالَ:\n• خُذْ ثَلَاثَةَ أَضْعَافِ عُمْرِي بَعْدَ ${years} سَنَوَاتٍ.\n• وَاطْرَحْ مِنْهَا ثَلَاثَةَ أَضْعَافِ عُمْرِي قَبْلَ ${years} سَنَوَاتٍ.\n• سَيَكُونُ لَدَيْكَ عَدَدُ سَنَوَاتِ عُمْرِي.\nفَمَا هُوَ عُمْرُهُ؟`,
+
     solution_farm: (rabbits: number) => 
       `الحل: الأرانب = ${rabbits}، إذن البط = ${rabbits * 4}، والدجاج = ${rabbits * 8}. (تحقق: ${rabbits} + ${rabbits * 4} = ${rabbits * 8} - ${rabbits * 3}).`,
 
@@ -84,6 +92,12 @@ export const translations: Record<Language, TranslationSchema> = {
 
     solution_sequence: (value: number) => 
       `الحل: النمط هو إضافة رقم ثابت في كل مرة. الرقم المفقود هو ${value}.`,
+
+    solution_age: (age: number, years: number) => 
+      `الحل: نفرض العمر = س.\n• بعد ${years} سنوات: 3(س + ${years}) = 3س + ${3*years}\n• قبل ${years} سنوات: 3(س - ${years}) = 3س - ${3*years}\n• بالطرح: (3س + ${3*years}) - (3س - ${3*years}) = ${years*6}\nإذن العمر هو ${age} عاماً.`,
+
+    hint_age: () => 
+      `تلميح: يمكنك تجربة الخيارات المعروضة ذهنياً في المعادلة لترى أي رقم يحققها. (أو فكر: طرح الأضعاف يلغي العمر نفسه ويترك فرق السنوات!).`,
 
     chickens: "الدجاج 🐔",
     ducks: "البط 🦆",
@@ -111,6 +125,7 @@ export const translations: Record<Language, TranslationSchema> = {
     completedSession: "You completed the session.",
     theme: "Theme",
     language: "Language",
+    hint: "💡 Hint",
 
     farm_template: (missing: number) => 
       `In a smart farm with chickens, ducks, and rabbits:\n• Ducks = half of chickens.\n• Rabbits = quarter of ducks.\n• Sum of rabbits and ducks = Chickens minus ${missing} chickens.\nWhat is the exact number of each animal?`,
@@ -121,6 +136,9 @@ export const translations: Record<Language, TranslationSchema> = {
     sequence_template: (seq: string) => 
       `Find the pattern and the missing number:\n${seq} , ?`,
 
+    age_template: (years: number) =>
+      `A person was asked about his age. He said:\n• Take 3 times my age in ${years} years.\n• Subtract 3 times my age ${years} years ago.\n• You will get my age.\nHow old is he?`,
+
     solution_farm: (rabbits: number) => 
       `Solution: Rabbits = ${rabbits}, so Ducks = ${rabbits * 4}, and Chickens = ${rabbits * 8}. (Check: ${rabbits} + ${rabbits * 4} = ${rabbits * 8} - ${rabbits * 3}).`,
 
@@ -129,6 +147,12 @@ export const translations: Record<Language, TranslationSchema> = {
 
     solution_sequence: (value: number) => 
       `Solution: The pattern is adding a constant number. The missing number is ${value}.`,
+
+    solution_age: (age: number, years: number) => 
+      `Solution: Let age = x.\n• In ${years} years: 3(x + ${years}) = 3x + ${3*years}\n• ${years} years ago: 3(x - ${years}) = 3x - ${3*years}\n• Subtracting: (3x + ${3*years}) - (3x - ${3*years}) = ${years*6}\nSo the age is ${age}.`,
+
+    hint_age: () =>
+      `Hint: Try mentally testing the options in the equation, or notice that subtracting the multiples cancels the age, leaving the difference in years!`,
 
     chickens: "Chickens 🐔",
     ducks: "Ducks 🦆",
