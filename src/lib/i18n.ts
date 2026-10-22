@@ -2,10 +2,11 @@
  * ==========================================
  * 📂 المسار: src/lib/i18n.ts
  * ⚙️ الوظيفة: قاموس الترجمة (عربي/إنجليزي) ونصوص الألغاز والحلول.
- * 📅 تاريخ التعديل: 2024-05-24
+ * 📅 تاريخ التعديل: 2026-07-24
  * 🛠️ التعديلات: 
- * - تصحيح معادلة لغز الأعمار لتوضيح (س) قبل النتيجة.
- * - إضافة فواصل أسطر (\n) في نص الحل لتحسين التموضع.
+ * - تحديث دالة hint_age لتكون ديناميكية تعتمد على عدد السنوات.
+ * - إضافة مفتاح footer لحقوق النشر (2026).
+ * - إضافة دالة share_message لنصوص المشاركة المترجمة.
  * ==========================================
  */
 
@@ -31,6 +32,7 @@ export interface TranslationSchema {
   theme: string;
   language: string;
   hint: string;
+  footer: string;
   
   farm_template: (missing: number) => string;
   distance_template: (distance: number) => string;
@@ -42,7 +44,8 @@ export interface TranslationSchema {
   solution_sequence: (value: number) => string;
   solution_age: (age: number, years: number) => string;
 
-  hint_age: () => string;
+  hint_age: (years: number) => string;
+  share_message: (score: number, url: string) => string;
 
   chickens: string;
   ducks: string;
@@ -72,6 +75,7 @@ export const translations: Record<Language, TranslationSchema> = {
     theme: "الثيم",
     language: "اللغة",
     hint: "💡 تلميح",
+    footer: "تصميم وتطوير: أ. مصطفى علي اكر - جميع الحقوق محفوظة © 2026",
 
     farm_template: (missing: number) => 
       `في مزرعة ذكية تضم دجاجاً، بطاً، وأرانب:\n• عدد البط = نصف عدد الدجاج.\n• عدد الأرانب = ربع عدد البط.\n• مجموع عدد الأرانب والبط = عدد الدجاج ناقصاً منه ${missing} دجاجات.\nفما هو عدد كل حيوان بدقة؟`,
@@ -94,12 +98,14 @@ export const translations: Record<Language, TranslationSchema> = {
     solution_sequence: (value: number) => 
       `الحل: النمط هو إضافة رقم ثابت في كل مرة. الرقم المفقود هو ${value}.`,
 
-    // 🛠️ تم تصحيح المعادلة هنا وإضافة فواصل الأسطر
     solution_age: (age: number, years: number) => 
       `الحل: نفرض العمر = س.\n• بعد ${years} سنوات: 3(س + ${years}) = 3س + ${3*years}\n• قبل ${years} سنوات: 3(س - ${years}) = 3س - ${3*years}\n• بالطرح: (3س + ${3*years}) - (3س - ${3*years}) = س\n• إذن: ${3*years + 3*years} = س\n• العمر هو ${age} عاماً.`,
 
-    hint_age: () => 
-      `تلميح: يمكنك تجربة الخيارات المعروضة ذهنياً في المعادلة لترى أي رقم يحققها. (أو فكر: طرح الأضعاف يلغي العمر نفسه ويترك فرق السنوات!).`,
+    hint_age: (years: number) => 
+      `تلميح: لاحظ أن (3س) تلغي بعضها البعض. يتبقى لديك (3 × ${years}) + (3 × ${years}) وهو ما يساوي (6 × ${years}). جرب حساب هذا الناتج وقارنه بالخيارات.`,
+
+    share_message: (score: number, url: string) => 
+      `🧠 تحدي سحر الرياضيات!\nلقد حققت ${score} نقطة! هل تستطيع التغلب عليّ؟ 🏆\n\nاضغط على الرابط لقبول التحدي:\n${url}`,
 
     chickens: "الدجاج 🐔",
     ducks: "البط 🦆",
@@ -128,6 +134,7 @@ export const translations: Record<Language, TranslationSchema> = {
     theme: "Theme",
     language: "Language",
     hint: "💡 Hint",
+    footer: "Designed & Developed by Mr. Mustafa Ali Eker - All Rights Reserved © 2026",
 
     farm_template: (missing: number) => 
       `In a smart farm with chickens, ducks, and rabbits:\n• Ducks = half of chickens.\n• Rabbits = quarter of ducks.\n• Sum of rabbits and ducks = Chickens minus ${missing} chickens.\nWhat is the exact number of each animal?`,
@@ -153,8 +160,11 @@ export const translations: Record<Language, TranslationSchema> = {
     solution_age: (age: number, years: number) => 
       `Solution: Let age = x.\n• In ${years} years: 3(x + ${years}) = 3x + ${3*years}\n• ${years} years ago: 3(x - ${years}) = 3x - ${3*years}\n• Subtracting: (3x + ${3*years}) - (3x - ${3*years}) = x\n• So: ${3*years + 3*years} = x\n• The age is ${age}.`,
 
-    hint_age: () =>
-      `Hint: Try mentally testing the options in the equation, or notice that subtracting the multiples cancels the age, leaving the difference in years!`,
+    hint_age: (years: number) =>
+      `Hint: Notice that (3x) cancels out. You are left with (3 × ${years}) + (3 × ${years}) which equals (6 × ${years}). Try calculating this result and compare it to the options.`,
+
+    share_message: (score: number, url: string) => 
+      `🧠 Math Magic Challenge!\nI scored ${score} points! Can you beat me? 🏆\n\nClick the link to accept the challenge:\n${url}`,
 
     chickens: "Chickens 🐔",
     ducks: "Ducks 🦆",
