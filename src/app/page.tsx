@@ -4,10 +4,9 @@
  * ⚙️ الوظيفة: الشاشة الرئيسية وشاشة اللعب (الواجهة الأمامية).
  * 📅 تاريخ التعديل: 2024-05-24
  * 🛠️ التعديلات: 
- * - إيقاف الانتقال التلقائي وإضافة زر "السؤال التالي".
- * - إضافة شرح الحل (Solution) بعد الإجابة.
- * - تطبيق العدادات الذكية (الأرانب فقط تتحرك والدجاج والبط يتحدثان تلقائياً).
- * - تحسين تجربة المستخدم (UX) وإضافة الثيم الزجاجي (Terminator/Barbie).
+ * - إضافة دعم "لغز الأعمار" (عرض السؤال، الحل، وتغيير شكل الخيارات).
+ * - إضافة زر التلميح (Hint) الذي يظهر فقط في لغز الأعمار.
+ * - ضمان استمرار عمل العدادات الذكية ومنع الانتقال التلقائي.
  * ==========================================
  */
 
@@ -50,6 +49,9 @@ export default function MathGame() {
   const [isAnswered, setIsAnswered] = useState(false);
   const [isCorrect, setIsCorrect] = useState(false);
   const [showSolution, setShowSolution] = useState(false);
+  
+  // 🆕 حالة إظهار التلميح
+  const [showHint, setShowHint] = useState(false);
   
   const [activeChallenge, setActiveChallenge] = useState<ChallengeData | null>(null);
   const [toastAchievement, setToastAchievement] = useState<string | null>(null);
@@ -98,6 +100,7 @@ export default function MathGame() {
     setIsAnswered(false);
     setIsCorrect(false);
     setShowSolution(false);
+    setShowHint(false); // إعادة ضبط التلميح
   };
 
   const handleAnimalCounter = (delta: number) => {
@@ -105,7 +108,6 @@ export default function MathGame() {
     
     setInputAnswers((prev: any) => {
       const newRabbits = Math.max(0, (prev.rabbits || 0) + delta);
-      // تحديث الدجاج والبط تلقائياً بناءً على الأرانب (العلاقات الثابتة)
       return {
         rabbits: newRabbits,
         ducks: newRabbits * 4,
@@ -142,7 +144,6 @@ export default function MathGame() {
     const newScore = currentRoundScore + pointsEarned;
     if (correct) setCurrentRoundScore(newScore);
     
-    // تحديث الإنجازات في الخلفية بدون انتقال تلقائي
     let justUnlockedStr: string | null = null;
     updatePlayer(prev => {
       const highest = Math.max(prev.progress.highestScore, newScore);
@@ -187,9 +188,6 @@ export default function MathGame() {
     updatePlayer(prev => ({ ...prev, preferences: { ...prev.preferences, language: prev.preferences?.language === 'ar' ? 'en' : 'ar' } }));
   };
 
-  // =====================================================================
-  // 🟢 الشاشة الرئيسية (Main Menu)
-  // =====================================================================
   if (screen === 'menu') {
     return (
       <div className={`min-h-screen flex flex-col items-center justify-center p-6 ${themeStyles.bg} transition-all duration-500 relative overflow-hidden`} dir={isRTL ? 'rtl' : 'ltr'}>
@@ -253,9 +251,6 @@ export default function MathGame() {
     );
   }
 
-  // =====================================================================
-  // 🔴 شاشة النهاية (End Screen)
-  // =====================================================================
   if (screen === 'end') {
     return (
       <div className={`min-h-screen flex flex-col items-center justify-center p-6 ${themeStyles.bg} text-center transition-all duration-500 relative overflow-hidden`} dir={isRTL ? 'rtl' : 'ltr'}>
@@ -280,9 +275,6 @@ export default function MathGame() {
     );
   }
 
-  // =====================================================================
-  // 🟡 شاشة اللغز (Puzzle Screen)
-  // =====================================================================
   return (
     <div className={`min-h-screen flex flex-col ${themeStyles.bg} transition-all duration-500 relative overflow-hidden`} dir={isRTL ? 'rtl' : 'ltr'}>
       <AchievementToast achievement={toastAchievement} text={t.newAchievement} />
@@ -296,18 +288,37 @@ export default function MathGame() {
 
       <main className="flex-1 flex flex-col items-center p-6 max-w-md mx-auto w-full mt-4 z-10">
         
-        <div className={`w-full ${themeStyles.card} p-8 rounded-3xl mb-8 flex items-center justify-center min-h-[170px]`}>
+        <div className={`w-full ${themeStyles.card} p-8 rounded-3xl mb-6 flex items-center justify-center min-h-[170px]`}>
           <p className="text-white whitespace-pre-line text-center text-2xl leading-relaxed font-black drop-shadow-md">
             {puzzle?.puzzle_type === 'farm' ? t.farm_template(puzzle.params.missing ?? 0) : 
              puzzle?.puzzle_type === 'distance' ? t.distance_template(puzzle.params.distance ?? 0) : 
-             puzzle?.puzzle_type === 'sequence' ? t.sequence_template((puzzle.params.seq ?? []).join(' , ')) : ''}
+             puzzle?.puzzle_type === 'sequence' ? t.sequence_template((puzzle.params.seq ?? []).join(' , ')) : 
+             puzzle?.puzzle_type === 'age' ? t.age_template(puzzle.params.years ?? 0) : ''}
           </p>
         </div>
+
+        {/* 💡 زر التلميح (يظهر فقط في لغز الأعمار) */}
+        {puzzle?.puzzle_type === 'age' && !isAnswered && (
+          <div className="w-full flex justify-end mb-4">
+            <button 
+              onClick={() => setShowHint(!showHint)} 
+              className="text-sm bg-yellow-500/20 text-yellow-300 border border-yellow-500/50 px-4 py-2 rounded-xl font-bold hover:bg-yellow-500/30 transition-all flex items-center gap-2"
+            >
+              {t.hint} {showHint ? '🔼' : '🔽'}
+            </button>
+          </div>
+        )}
+
+        {/* 📜 نص التلميح */}
+        {showHint && puzzle?.puzzle_type === 'age' && (
+          <div className="w-full bg-yellow-500/10 border border-yellow-500/30 p-5 rounded-2xl mb-4 text-yellow-200 text-base font-bold leading-relaxed">
+            {t.hint_age()}
+          </div>
+        )}
 
         {/* 🐇 لغز المزرعة: العداد التفاعلي للأرانب فقط */}
         {puzzle?.interaction_type === 'multi_input_animals' && (
           <div className="w-full space-y-4">
-            {/* صف الأرانب (تفاعلي) */}
             <div className={`w-full flex items-center justify-between ${themeStyles.card} p-4 rounded-3xl border-2`}>
               <span className="text-xl font-black text-white min-w-[100px]">{t.rabbits}</span>
               <div className="flex items-center gap-3">
@@ -331,13 +342,11 @@ export default function MathGame() {
               </div>
             </div>
 
-            {/* صف البط (يُحسب تلقائياً) */}
             <div className={`w-full flex items-center justify-between ${themeStyles.card} p-4 rounded-3xl border-2 opacity-70`}>
               <span className="text-xl font-black text-white min-w-[100px]">{t.ducks}</span>
               <span className="text-3xl font-black text-white">{inputAnswers.ducks || 0}</span>
             </div>
 
-            {/* صف الدجاج (يُحسب تلقائياً) */}
             <div className={`w-full flex items-center justify-between ${themeStyles.card} p-4 rounded-3xl border-2 opacity-70`}>
               <span className="text-xl font-black text-white min-w-[100px]">{t.chickens}</span>
               <span className="text-3xl font-black text-white">{inputAnswers.chickens || 0}</span>
@@ -345,7 +354,7 @@ export default function MathGame() {
           </div>
         )}
 
-        {/* 🚗 لغز المسافة: الخيارات المتعددة */}
+        {/* 🚗 لغز المسافة والأعمار: الخيارات المتعددة */}
         {puzzle?.interaction_type === 'multiple_choice' && (
           <div className="w-full space-y-4">
             {puzzle.options?.map((opt: any) => (
@@ -359,7 +368,8 @@ export default function MathGame() {
                     : `${themeStyles.card} hover:bg-white/20`
                 }`}
               >
-                {opt.value === 0 ? t.zero : `${opt.value} ${t.km}`}
+                {/* إذا كان اللغز مسافة نضيف "كم"، وإذا كان أعماراً نضع الرقم فقط */}
+                {opt.value === 0 ? t.zero : (puzzle.puzzle_type === 'distance' ? `${opt.value} ${t.km}` : opt.value)}
               </button>
             ))}
           </div>
@@ -379,7 +389,6 @@ export default function MathGame() {
           </div>
         )}
 
-        {/* زر التحقق */}
         {!isAnswered && (
           <button 
             onClick={checkAnswer} 
@@ -394,7 +403,6 @@ export default function MathGame() {
           </button>
         )}
 
-        {/* نتيجة الإجابة + الحل + زر الانتقال */}
         {isAnswered && (
           <div className={`w-full p-6 rounded-3xl border-2 mt-6 text-center transition-all ${isCorrect ? 'bg-emerald-500/20 border-emerald-400 shadow-[0_0_25px_rgba(16,185,129,0.4)]' : 'bg-red-500/20 border-red-400 shadow-[0_0_25px_rgba(239,68,68,0.4)]'}`}>
             <span className={`font-black block mb-4 text-3xl ${isCorrect ? 'text-emerald-300' : 'text-red-300'}`}>
@@ -406,7 +414,8 @@ export default function MathGame() {
                 <p className="text-white text-base font-bold leading-relaxed text-right" dir={isRTL ? 'rtl' : 'ltr'}>
                   {puzzle.puzzle_type === 'farm' ? t.solution_farm(puzzle.correct_answer.rabbits) : 
                    puzzle.puzzle_type === 'distance' ? t.solution_distance(puzzle.params.distance) : 
-                   puzzle.puzzle_type === 'sequence' ? t.solution_sequence(puzzle.correct_answer.value) : ''}
+                   puzzle.puzzle_type === 'sequence' ? t.solution_sequence(puzzle.correct_answer.value) : 
+                   puzzle.puzzle_type === 'age' ? t.solution_age(puzzle.options?.find((o: any) => o.id === 'opt1')?.value ?? 0, puzzle.params.years) : ''}
                 </p>
               </div>
             )}
