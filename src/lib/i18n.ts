@@ -1,4 +1,13 @@
-// src/lib/i18n.ts
+/**
+ * ==========================================
+ * 📂 المسار: src/lib/i18n.ts
+ * ⚙️ الوظيفة: قاموس الترجمة (عربي/إنجليزي) ونصوص الألغاز والحلول.
+ * 📅 تاريخ التعديل: 2024-05-24
+ * 🛠️ التعديلات: 
+ * - إضافة واجهة TranslationSchema.
+ * - إضافة نصوص شرح الحل (solution_farm, solution_distance, solution_sequence) المطابقة لكتاب منسا.
+ * ==========================================
+ */
 
 export type Language = 'ar' | 'en';
 
@@ -26,7 +35,6 @@ export interface TranslationSchema {
   distance_template: (distance: number) => string;
   sequence_template: (seq: string) => string;
 
-  // دوال الحلول الجديدة
   solution_farm: (rabbits: number) => string;
   solution_distance: (distance: number) => string;
   solution_sequence: (value: number) => string;
