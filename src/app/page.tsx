@@ -4,8 +4,8 @@
  * ⚙️ الوظيفة: الشاشة الرئيسية وشاشة اللعب (الواجهة الأمامية).
  * 📅 تاريخ التعديل: 2024-05-24
  * 🛠️ التعديلات: 
- * - تصحيح تموضع نص الحل بإضافة whitespace-pre-line.
- * - دعم لغز الأعمار وزر التلميح.
+ * - توليد المصفوفة الكاملة للأسئلة (sessionQuestions) عند بدء اللعبة لمنع مشاكل Re-render.
+ * - الاعتماد على getSessionPlan و generatePuzzle لضمان تباين مضمون 100%.
  * ==========================================
  */
 
@@ -13,7 +13,7 @@
 
 import { useState, useEffect } from 'react';
 import { parseChallengeToken, ChallengeData } from '@/lib/challenge';
-import { generatePuzzle, validateAnswer, Puzzle } from '@/lib/puzzleEngine';
+import { getSessionPlan, generatePuzzle, validateAnswer, Puzzle } from '@/lib/puzzleEngine';
 import ChallengeShare from '@/components/ChallengeShare';
 import { usePlayerStore } from '@/lib/usePlayerStore';
 import { ALL_ACHIEVEMENTS } from '@/lib/store';
@@ -36,6 +36,11 @@ export default function MathGame() {
   
   const [isMounted, setIsMounted] = useState(false);
   const [screen, setScreen] = useState('menu');
+  
+  // 🆕 المصفوفة الكاملة للأسئلة المحملة مسبقاً
+  const [sessionQuestions, setSessionQuestions] = useState<Puzzle[]>([]);
+  
+  // السؤال الحالي المعروض
   const [puzzle, setPuzzle] = useState<Puzzle | null>(null);
   
   const [currentRoundScore, setCurrentRoundScore] = useState(0);
@@ -48,7 +53,6 @@ export default function MathGame() {
   const [isAnswered, setIsAnswered] = useState(false);
   const [isCorrect, setIsCorrect] = useState(false);
   const [showSolution, setShowSolution] = useState(false);
-  
   const [showHint, setShowHint] = useState(false);
   
   const [activeChallenge, setActiveChallenge] = useState<ChallengeData | null>(null);
@@ -89,8 +93,8 @@ export default function MathGame() {
     headerBg: 'bg-transparent backdrop-blur-md border-b border-white/10',
   };
 
-  const generateNewPuzzle = () => {
-    const newPuzzle = generatePuzzle(lang);
+  // إعداد واجهة السؤال
+  const preparePuzzleState = (newPuzzle: Puzzle) => {
     setPuzzle(newPuzzle);
     setInputAnswers({ chickens: 0, ducks: 0, rabbits: 0 });
     setSelectedChoice(null);
@@ -103,7 +107,6 @@ export default function MathGame() {
 
   const handleAnimalCounter = (delta: number) => {
     if (isAnswered) return;
-    
     setInputAnswers((prev: any) => {
       const newRabbits = Math.max(0, (prev.rabbits || 0) + delta);
       return {
@@ -115,10 +118,16 @@ export default function MathGame() {
   };
 
   const startGame = () => {
+    // 🛡️ توليد الجلسة كاملة دفعة واحدة (Client-side)
+    const plan = getSessionPlan();
+    const generatedQuestions = plan.map(variant => generatePuzzle(lang, variant));
+    
+    setSessionQuestions(generatedQuestions);
     setCurrentRoundScore(0);
     setQuestionsAnswered(0);
     setScreen('puzzle');
-    generateNewPuzzle();
+    
+    preparePuzzleState(generatedQuestions[0]);
   };
 
   const checkAnswer = () => {
@@ -170,11 +179,12 @@ export default function MathGame() {
   };
 
   const handleNextQuestion = () => {
-    if (questionsAnswered + 1 >= 5) {
+    if (questionsAnswered + 1 >= sessionQuestions.length) {
       setScreen('end');
     } else {
-      setQuestionsAnswered(prev => prev + 1);
-      generateNewPuzzle();
+      const nextIndex = questionsAnswered + 1;
+      setQuestionsAnswered(nextIndex);
+      preparePuzzleState(sessionQuestions[nextIndex]);
     }
   };
 
@@ -401,7 +411,6 @@ export default function MathGame() {
               {isCorrect ? t.correctAnswer : t.wrongAnswer}
             </span>
             
-            {/* 🛠️ التعديل هنا: إضافة whitespace-pre-line وتعديل التموضع */}
             {showSolution && puzzle && (
               <div className="bg-black/30 p-5 rounded-2xl border border-white/10 mb-6 w-full">
                 <p className="text-white text-base font-bold leading-relaxed text-start whitespace-pre-line" dir={isRTL ? 'rtl' : 'ltr'}>
