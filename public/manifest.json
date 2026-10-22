@@ -1,7 +1,8 @@
 {
+  "_comment": "📂 المسار: public/manifest.json | ⚙️ الوظيفة: إعدادات PWA | 📅 تاريخ: 2024-05-24 | 🛠️ التعديل: تحديث وصف التطبيق (إزالة Rust) وإضافة الوسم.",
   "name": "سحر الرياضيات - Math Magic",
   "short_name": "سحر الرياضيات",
-  "description": "تطبيق ألغاز رياضية يعمل بمحرك Rust فائق السرعة",
+  "description": "تطبيق ألغاز رياضية ومنطقية تفاعلية يعمل بمحرك TypeScript فائق السرعة",
   "start_url": "/math-magic/",
   "display": "standalone",
   "background_color": "#0f172a",
