@@ -1,3 +1,16 @@
+/**
+ * ==========================================
+ * 📂 المسار: src/app/page.tsx
+ * ⚙️ الوظيفة: الشاشة الرئيسية وشاشة اللعب (الواجهة الأمامية).
+ * 📅 تاريخ التعديل: 2024-05-24
+ * 🛠️ التعديلات: 
+ * - إيقاف الانتقال التلقائي وإضافة زر "السؤال التالي".
+ * - إضافة شرح الحل (Solution) بعد الإجابة.
+ * - تطبيق العدادات الذكية (الأرانب فقط تتحرك والدجاج والبط يتحدثان تلقائياً).
+ * - تحسين تجربة المستخدم (UX) وإضافة الثيم الزجاجي (Terminator/Barbie).
+ * ==========================================
+ */
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -30,7 +43,6 @@ export default function MathGame() {
   const [currentRoundScore, setCurrentRoundScore] = useState(0);
   const [questionsAnswered, setQuestionsAnswered] = useState(0);
   
-  // حالة العدادات للحيوانات (مبدئياً 0 لكل حيوان)
   const [inputAnswers, setInputAnswers] = useState<any>({ chickens: 0, ducks: 0, rabbits: 0 });
   const [selectedChoice, setSelectedChoice] = useState<string | null>(null);
   const [singleInput, setSingleInput] = useState<string>('');
@@ -88,26 +100,16 @@ export default function MathGame() {
     setShowSolution(false);
   };
 
-  // دالة تحديث أعداد الحيوانات مع الربط التلقائي بالنسبة المساعدة (Smart Ratio Coupling)
-  const handleAnimalCounter = (field: string, delta: number) => {
+  const handleAnimalCounter = (delta: number) => {
     if (isAnswered) return;
     
     setInputAnswers((prev: any) => {
-      const currentVal = prev[field] || 0;
-      const newVal = Math.max(0, currentVal + delta);
-      
-      // إذا قام اللاعب بتغيير عدد الأرانب، نقوم بتحديث البط والدجاج تلقائياً حسب النسب المساعدة للتجربة
-      if (field === 'rabbits') {
-        return {
-          rabbits: newVal,
-          ducks: newVal * 4,
-          chickens: newVal * 8,
-        };
-      }
-      
+      const newRabbits = Math.max(0, (prev.rabbits || 0) + delta);
+      // تحديث الدجاج والبط تلقائياً بناءً على الأرانب (العلاقات الثابتة)
       return {
-        ...prev,
-        [field]: newVal
+        rabbits: newRabbits,
+        ducks: newRabbits * 4,
+        chickens: newRabbits * 8,
       };
     });
   };
@@ -140,40 +142,41 @@ export default function MathGame() {
     const newScore = currentRoundScore + pointsEarned;
     if (correct) setCurrentRoundScore(newScore);
     
-    setTimeout(() => {
-      if (questionsAnswered + 1 >= 5) {
-        setScreen('end');
-        
-        let justUnlockedStr: string | null = null;
-        updatePlayer(prev => {
-          const highest = Math.max(prev.progress.highestScore, newScore);
-          const solvedCount = prev.progress.totalPuzzlesSolved + (correct ? 1 : 0);
-          const newAchievements = [...(prev.progress.achievements || [])];
+    // تحديث الإنجازات في الخلفية بدون انتقال تلقائي
+    let justUnlockedStr: string | null = null;
+    updatePlayer(prev => {
+      const highest = Math.max(prev.progress.highestScore, newScore);
+      const solvedCount = prev.progress.totalPuzzlesSolved + (correct ? 1 : 0);
+      const newAchievements = [...(prev.progress.achievements || [])];
 
-          if (solvedCount >= 1 && !newAchievements.includes('first_win')) {
-            newAchievements.push('first_win'); justUnlockedStr = lang === 'ar' ? '🐣 المبتدئ الذكي' : '🐣 Smart Beginner';
-          }
-          if (newScore >= 50 && !newAchievements.includes('score_50')) {
-            newAchievements.push('score_50'); justUnlockedStr = lang === 'ar' ? '⚡ السريع' : '⚡ Fast';
-          }
-          if (highest >= 100 && !newAchievements.includes('score_100')) {
-            newAchievements.push('score_100'); justUnlockedStr = lang === 'ar' ? '🏆 الأسطورة' : '🏆 Legend';
-          }
-          if (activeChallenge && newScore > activeChallenge.score && !newAchievements.includes('challenge_win')) {
-            newAchievements.push('challenge_win'); justUnlockedStr = lang === 'ar' ? '⚔️ قاهر التحديات' : '⚔️ Challenger';
-          }
-          return { ...prev, progress: { ...prev.progress, highestScore: highest, totalPuzzlesSolved: solvedCount, achievements: newAchievements } };
-        });
-
-        if (justUnlockedStr) {
-          setToastAchievement(justUnlockedStr);
-          setTimeout(() => setToastAchievement(null), 4000);
-        }
-      } else {
-        setQuestionsAnswered(prev => prev + 1);
-        generateNewPuzzle();
+      if (solvedCount >= 1 && !newAchievements.includes('first_win')) {
+        newAchievements.push('first_win'); justUnlockedStr = lang === 'ar' ? '🐣 المبتدئ الذكي' : '🐣 Smart Beginner';
       }
-    }, 5000);
+      if (newScore >= 50 && !newAchievements.includes('score_50')) {
+        newAchievements.push('score_50'); justUnlockedStr = lang === 'ar' ? '⚡ السريع' : '⚡ Fast';
+      }
+      if (highest >= 100 && !newAchievements.includes('score_100')) {
+        newAchievements.push('score_100'); justUnlockedStr = lang === 'ar' ? '🏆 الأسطورة' : '🏆 Legend';
+      }
+      if (activeChallenge && newScore > activeChallenge.score && !newAchievements.includes('challenge_win')) {
+        newAchievements.push('challenge_win'); justUnlockedStr = lang === 'ar' ? '⚔️ قاهر التحديات' : '⚔️ Challenger';
+      }
+      return { ...prev, progress: { ...prev.progress, highestScore: highest, totalPuzzlesSolved: solvedCount, achievements: newAchievements } };
+    });
+
+    if (justUnlockedStr) {
+      setToastAchievement(justUnlockedStr);
+      setTimeout(() => setToastAchievement(null), 4000);
+    }
+  };
+
+  const handleNextQuestion = () => {
+    if (questionsAnswered + 1 >= 5) {
+      setScreen('end');
+    } else {
+      setQuestionsAnswered(prev => prev + 1);
+      generateNewPuzzle();
+    }
   };
 
   const toggleTheme = () => {
@@ -250,6 +253,9 @@ export default function MathGame() {
     );
   }
 
+  // =====================================================================
+  // 🔴 شاشة النهاية (End Screen)
+  // =====================================================================
   if (screen === 'end') {
     return (
       <div className={`min-h-screen flex flex-col items-center justify-center p-6 ${themeStyles.bg} text-center transition-all duration-500 relative overflow-hidden`} dir={isRTL ? 'rtl' : 'ltr'}>
@@ -275,7 +281,7 @@ export default function MathGame() {
   }
 
   // =====================================================================
-  // 🔴 شاشة اللغز (Puzzle Screen - بالعدادات التفاعلية)
+  // 🟡 شاشة اللغز (Puzzle Screen)
   // =====================================================================
   return (
     <div className={`min-h-screen flex flex-col ${themeStyles.bg} transition-all duration-500 relative overflow-hidden`} dir={isRTL ? 'rtl' : 'ltr'}>
@@ -292,48 +298,54 @@ export default function MathGame() {
         
         <div className={`w-full ${themeStyles.card} p-8 rounded-3xl mb-8 flex items-center justify-center min-h-[170px]`}>
           <p className="text-white whitespace-pre-line text-center text-2xl leading-relaxed font-black drop-shadow-md">
-            {puzzle?.puzzle_type === 'farm' ? t.farm_template(puzzle.params.missing) : 
-             puzzle?.puzzle_type === 'distance' ? t.distance_template(puzzle.params.distance) : 
-             puzzle?.puzzle_type === 'sequence' ? t.sequence_template(puzzle.params.seq.join(' , ')) : ''}
+            {puzzle?.puzzle_type === 'farm' ? t.farm_template(puzzle.params.missing ?? 0) : 
+             puzzle?.puzzle_type === 'distance' ? t.distance_template(puzzle.params.distance ?? 0) : 
+             puzzle?.puzzle_type === 'sequence' ? t.sequence_template((puzzle.params.seq ?? []).join(' , ')) : ''}
           </p>
         </div>
 
-        {/* ⚡ العدادات التفاعلية (+ / -) للحيوانات بدلاً من لوحة المفاتيح ⚡ */}
+        {/* 🐇 لغز المزرعة: العداد التفاعلي للأرانب فقط */}
         {puzzle?.interaction_type === 'multi_input_animals' && (
           <div className="w-full space-y-4">
-            {['rabbits', 'ducks', 'chickens'].map(field => (
-              <div key={field} className={`w-full flex items-center justify-between ${themeStyles.card} p-4 rounded-3xl border-2`}>
-                <span className="text-xl font-black text-white min-w-[100px]">{t[field as keyof typeof t]}</span>
-                
-                <div className="flex items-center gap-3">
-                  <button 
-                    disabled={isAnswered}
-                    onClick={() => handleAnimalCounter(field, -1)}
-                    className={`w-12 h-12 rounded-2xl ${themeStyles.counterBtn} font-black text-2xl flex items-center justify-center`}
-                  >
-                    -
-                  </button>
-                  
-                  <span className="w-14 text-center text-3xl font-black text-yellow-300">
-                    {inputAnswers[field] || 0}
-                  </span>
-                  
-                  <button 
-                    disabled={isAnswered}
-                    onClick={() => handleAnimalCounter(field, 1)}
-                    className={`w-12 h-12 rounded-2xl ${themeStyles.counterBtn} font-black text-2xl flex items-center justify-center`}
-                  >
-                    +
-                  </button>
-                </div>
+            {/* صف الأرانب (تفاعلي) */}
+            <div className={`w-full flex items-center justify-between ${themeStyles.card} p-4 rounded-3xl border-2`}>
+              <span className="text-xl font-black text-white min-w-[100px]">{t.rabbits}</span>
+              <div className="flex items-center gap-3">
+                <button 
+                  disabled={isAnswered}
+                  onClick={() => handleAnimalCounter(-1)}
+                  className={`w-12 h-12 rounded-2xl ${themeStyles.counterBtn} font-black text-2xl flex items-center justify-center`}
+                >
+                  -
+                </button>
+                <span className="w-14 text-center text-3xl font-black text-yellow-300">
+                  {inputAnswers.rabbits || 0}
+                </span>
+                <button 
+                  disabled={isAnswered}
+                  onClick={() => handleAnimalCounter(1)}
+                  className={`w-12 h-12 rounded-2xl ${themeStyles.counterBtn} font-black text-2xl flex items-center justify-center`}
+                >
+                  +
+                </button>
               </div>
-            ))}
-            <p className="text-center text-xs font-bold text-white/60 mt-1">
-              💡 {lang === 'ar' ? 'تلميح: زيادة الأرانب تقوم بضبط باقي الأعداد حسب النسبة تلقائياً!' : 'Hint: Increasing rabbits auto-adjusts other animals based on ratio!'}
-            </p>
+            </div>
+
+            {/* صف البط (يُحسب تلقائياً) */}
+            <div className={`w-full flex items-center justify-between ${themeStyles.card} p-4 rounded-3xl border-2 opacity-70`}>
+              <span className="text-xl font-black text-white min-w-[100px]">{t.ducks}</span>
+              <span className="text-3xl font-black text-white">{inputAnswers.ducks || 0}</span>
+            </div>
+
+            {/* صف الدجاج (يُحسب تلقائياً) */}
+            <div className={`w-full flex items-center justify-between ${themeStyles.card} p-4 rounded-3xl border-2 opacity-70`}>
+              <span className="text-xl font-black text-white min-w-[100px]">{t.chickens}</span>
+              <span className="text-3xl font-black text-white">{inputAnswers.chickens || 0}</span>
+            </div>
           </div>
         )}
 
+        {/* 🚗 لغز المسافة: الخيارات المتعددة */}
         {puzzle?.interaction_type === 'multiple_choice' && (
           <div className="w-full space-y-4">
             {puzzle.options?.map((opt: any) => (
@@ -353,31 +365,26 @@ export default function MathGame() {
           </div>
         )}
 
+        {/* 🔢 لغز المتسلسلة: الإدخال المباشر */}
         {puzzle?.interaction_type === 'single_input' && (
-          <div className={`w-full flex items-center justify-between ${themeStyles.card} p-5 rounded-3xl`}>
-             <button 
-                disabled={isAnswered}
-                onClick={() => setSingleInput(prev => String(Math.max(0, Number(prev || 0) - 1)))}
-                className={`w-14 h-14 rounded-2xl ${themeStyles.counterBtn} font-black text-3xl flex items-center justify-center`}
-             >
-               -
-             </button>
-             <span className="text-4xl font-black text-yellow-300">{singleInput || '0'}</span>
-             <button 
-                disabled={isAnswered}
-                onClick={() => setSingleInput(prev => String(Number(prev || 0) + 1))}
-                className={`w-14 h-14 rounded-2xl ${themeStyles.counterBtn} font-black text-3xl flex items-center justify-center`}
-             >
-               +
-             </button>
+          <div className={`w-full flex flex-col items-center ${themeStyles.card} p-5 rounded-3xl`}>
+             <input
+              type="number"
+              disabled={isAnswered}
+              placeholder={lang === 'ar' ? 'اكتب الرقم هنا...' : 'Type answer...'}
+              value={singleInput}
+              onChange={(e) => setSingleInput(e.target.value)}
+              className={`w-full text-center ${themeStyles.inputBg} rounded-2xl p-5 text-4xl font-black focus:outline-none transition-all`}
+            />
           </div>
         )}
 
+        {/* زر التحقق */}
         {!isAnswered && (
           <button 
             onClick={checkAnswer} 
             disabled={
-              (puzzle?.interaction_type === 'multi_input_animals' && (inputAnswers.chickens === 0 && inputAnswers.ducks === 0 && inputAnswers.rabbits === 0)) ||
+              (puzzle?.interaction_type === 'multi_input_animals' && (inputAnswers.rabbits === 0)) ||
               (puzzle?.interaction_type === 'multiple_choice' && !selectedChoice) ||
               (puzzle?.interaction_type === 'single_input' && !singleInput)
             }
@@ -387,21 +394,29 @@ export default function MathGame() {
           </button>
         )}
 
+        {/* نتيجة الإجابة + الحل + زر الانتقال */}
         {isAnswered && (
           <div className={`w-full p-6 rounded-3xl border-2 mt-6 text-center transition-all ${isCorrect ? 'bg-emerald-500/20 border-emerald-400 shadow-[0_0_25px_rgba(16,185,129,0.4)]' : 'bg-red-500/20 border-red-400 shadow-[0_0_25px_rgba(239,68,68,0.4)]'}`}>
-            <span className={`font-black block mb-2 text-3xl ${isCorrect ? 'text-emerald-300' : 'text-red-300'}`}>
+            <span className={`font-black block mb-4 text-3xl ${isCorrect ? 'text-emerald-300' : 'text-red-300'}`}>
               {isCorrect ? t.correctAnswer : t.wrongAnswer}
             </span>
             
             {showSolution && puzzle && (
-              <p className="text-white text-base font-bold leading-relaxed mt-4 pt-4 border-t border-white/20 text-right" dir={isRTL ? 'rtl' : 'ltr'}>
-                {puzzle.puzzle_type === 'farm' ? t.solution_farm(puzzle.correct_answer.rabbits) : 
-                 puzzle.puzzle_type === 'distance' ? t.solution_distance(puzzle.params.distance) : 
-                 puzzle.puzzle_type === 'sequence' ? t.solution_sequence(puzzle.correct_answer.value) : ''}
-              </p>
+              <div className="bg-black/30 p-4 rounded-2xl border border-white/10 mb-6">
+                <p className="text-white text-base font-bold leading-relaxed text-right" dir={isRTL ? 'rtl' : 'ltr'}>
+                  {puzzle.puzzle_type === 'farm' ? t.solution_farm(puzzle.correct_answer.rabbits) : 
+                   puzzle.puzzle_type === 'distance' ? t.solution_distance(puzzle.params.distance) : 
+                   puzzle.puzzle_type === 'sequence' ? t.solution_sequence(puzzle.correct_answer.value) : ''}
+                </p>
+              </div>
             )}
-            
-            <p className="text-white/70 text-sm font-bold mt-4">{t.nextQuestion}</p>
+
+            <button 
+              onClick={handleNextQuestion}
+              className={`w-full py-4 rounded-2xl font-black text-xl transition-all shadow-lg ${isBarbie ? 'bg-pink-600 hover:bg-pink-500 text-white' : 'bg-blue-600 hover:bg-blue-500 text-white'}`}
+            >
+              {questionsAnswered + 1 >= 5 ? (lang === 'ar' ? 'عرض النتائج 🏁' : 'Show Results 🏁') : (lang === 'ar' ? 'السؤال التالي ⏭️' : 'Next Question ⏭️')}
+            </button>
           </div>
         )}
       </main>
