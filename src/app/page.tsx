@@ -4,10 +4,9 @@
  * ⚙️ الوظيفة: الشاشة الرئيسية وشاشة اللعب (الواجهة الأمامية).
  * 📅 تاريخ التعديل: 2026-07-24
  * 🛠️ التعديلات: 
- * - تغيير نظام النقاط: الإجابة الصحيحة تمنح 20 نقطة (لإتاحة فرصة الوصول إلى 100 نقطة).
- * - تمرير اللغة إلى مكون ChallengeShare.
- * - تمرير عدد السنوات لدالة hint_age الديناميكية.
- * - إضافة الفوتر (حقوق النشر) في جميع الشاشات.
+ * - تصحيح شرط "قاهر التحديات" ليصبح (أكبر من أو يساوي >=).
+ * - إضافة منطق منح لقب "المثابر" عند حل 20 لغزاً.
+ * - إضافة الترجمة الإنجليزية للقب "المثابر".
  * ==========================================
  */
 
@@ -144,7 +143,6 @@ export default function MathGame() {
     const correct = validateAnswer(puzzle, answerPayload);
     setIsCorrect(correct);
 
-    // 🆕 تغيير النقاط إلى 20
     const pointsEarned = correct ? 20 : 0;
     const newScore = currentRoundScore + pointsEarned;
     if (correct) setCurrentRoundScore(newScore);
@@ -155,18 +153,27 @@ export default function MathGame() {
       const solvedCount = prev.progress.totalPuzzlesSolved + (correct ? 1 : 0);
       const newAchievements = [...(prev.progress.achievements || [])];
 
+      // 1. المبتدئ الذكي
       if (solvedCount >= 1 && !newAchievements.includes('first_win')) {
         newAchievements.push('first_win'); justUnlockedStr = lang === 'ar' ? '🐣 المبتدئ الذكي' : '🐣 Smart Beginner';
       }
+      // 2. السريع
       if (newScore >= 50 && !newAchievements.includes('score_50')) {
         newAchievements.push('score_50'); justUnlockedStr = lang === 'ar' ? '⚡ السريع' : '⚡ Fast';
       }
+      // 3. الأسطورة
       if (highest >= 100 && !newAchievements.includes('score_100')) {
         newAchievements.push('score_100'); justUnlockedStr = lang === 'ar' ? '🏆 الأسطورة' : '🏆 Legend';
       }
-      if (activeChallenge && newScore > activeChallenge.score && !newAchievements.includes('challenge_win')) {
+      // 4. قاهر التحديات (تم التعديل إلى >=)
+      if (activeChallenge && newScore >= activeChallenge.score && !newAchievements.includes('challenge_win')) {
         newAchievements.push('challenge_win'); justUnlockedStr = lang === 'ar' ? '⚔️ قاهر التحديات' : '⚔️ Challenger';
       }
+      // 5. المثابر (جديد)
+      if (solvedCount >= 20 && !newAchievements.includes('persistent_20')) {
+        newAchievements.push('persistent_20'); justUnlockedStr = lang === 'ar' ? '🏅 المثابر' : '🏅 Persistent';
+      }
+
       return { ...prev, progress: { ...prev.progress, highestScore: highest, totalPuzzlesSolved: solvedCount, achievements: newAchievements } };
     });
 
@@ -192,6 +199,28 @@ export default function MathGame() {
 
   const toggleLanguage = () => {
     updatePlayer(prev => ({ ...prev, preferences: { ...prev.preferences, language: prev.preferences?.language === 'ar' ? 'en' : 'ar' } }));
+  };
+
+  // تحديث دالة عرض الأوسمة لدعم اللقب الجديد
+  const renderAchievementIcon = (ach: any, unlocked: boolean) => {
+    let enTitle = '';
+    switch (ach.id) {
+      case 'first_win': enTitle = 'Beginner'; break;
+      case 'score_50': enTitle = 'Fast'; break;
+      case 'score_100': enTitle = 'Legend'; break;
+      case 'challenge_win': enTitle = 'Challenger'; break;
+      case 'persistent_20': enTitle = 'Persistent'; break;
+      default: enTitle = ach.title;
+    }
+
+    return (
+      <div key={ach.id} className={`flex flex-col items-center p-3 rounded-2xl text-center transition-all ${unlocked ? 'bg-gradient-to-b from-yellow-400/30 to-transparent border-2 border-yellow-300 text-white shadow-[0_0_20px_rgba(253,224,71,0.4)]' : 'bg-transparent border border-white/10 text-white/40 opacity-50'}`}>
+        <span className={`text-4xl mb-2 ${!unlocked && 'grayscale opacity-40'}`}>{ach.icon}</span>
+        <span className="text-[10px] font-black leading-tight">
+          {lang === 'ar' ? ach.title : enTitle}
+        </span>
+      </div>
+    );
   };
 
   if (screen === 'menu') {
@@ -237,20 +266,10 @@ export default function MathGame() {
           <span className="text-white drop-shadow-md">{activeChallenge ? t.acceptChallenge : t.startChallenge}</span>
         </button>
 
-        <div className={`w-full max-w-md ${themeStyles.card} p-6 rounded-3xl`}>
-          <h3 className="text-lg font-black mb-4 text-center text-yellow-300 tracking-wider">🏅 {t.achievements}</h3>
-          <div className="grid grid-cols-4 gap-3">
-            {ALL_ACHIEVEMENTS.map(ach => {
-              const unlocked = player.progress?.achievements?.includes(ach.id);
-              return (
-                <div key={ach.id} className={`flex flex-col items-center p-3 rounded-2xl text-center transition-all ${unlocked ? 'bg-gradient-to-b from-yellow-400/30 to-transparent border-2 border-yellow-300 text-white shadow-[0_0_20px_rgba(253,224,71,0.4)]' : 'bg-transparent border border-white/10 text-white/40 opacity-50'}`}>
-                  <span className={`text-4xl mb-2 ${!unlocked && 'grayscale opacity-40'}`}>{ach.icon}</span>
-                  <span className="text-xs font-black leading-tight">
-                    {lang === 'ar' ? ach.title : (ach.id === 'first_win' ? 'Beginner' : ach.id === 'score_50' ? 'Fast' : ach.id === 'score_100' ? 'Legend' : 'Challenger')}
-                  </span>
-                </div>
-              );
-            })}
+        <div className={`w-full max-w-md ${themeStyles.card} p-5 rounded-3xl`}>
+          <h3 className="text-md font-black mb-4 text-center text-yellow-300 tracking-wider">🏅 {t.achievements}</h3>
+          <div className="grid grid-cols-5 gap-2">
+            {ALL_ACHIEVEMENTS.map(ach => renderAchievementIcon(ach, player.progress?.achievements?.includes(ach.id) || false))}
           </div>
         </div>
 
@@ -275,12 +294,7 @@ export default function MathGame() {
         </div>
 
         <div className="w-full max-w-md">
-           <ChallengeShare 
-             playerName={player.profile?.name || 'Player'} 
-             score={currentRoundScore} 
-             puzzleId="session_1" 
-             lang={lang}
-           />
+           <ChallengeShare playerName={player.profile?.name || 'Player'} score={currentRoundScore} puzzleId="session_1" lang={lang} />
         </div>
 
         <button onClick={() => setScreen('menu')} className="mt-8 px-8 py-4 rounded-2xl bg-white/10 hover:bg-white/20 border-2 border-white/20 text-white font-black text-xl transition-all shadow-xl">
