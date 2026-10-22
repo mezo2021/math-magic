@@ -4,9 +4,10 @@
  * ⚙️ الوظيفة: الشاشة الرئيسية وشاشة اللعب (الواجهة الأمامية).
  * 📅 تاريخ التعديل: 2026-07-24
  * 🛠️ التعديلات: 
+ * - تغيير نظام النقاط: الإجابة الصحيحة تمنح 20 نقطة (لإتاحة فرصة الوصول إلى 100 نقطة).
  * - تمرير اللغة إلى مكون ChallengeShare.
  * - تمرير عدد السنوات لدالة hint_age الديناميكية.
- * - إضافة الفوتر (حقوق النشر) في جميع الشاشات (القائمة، اللعب، النتائج).
+ * - إضافة الفوتر (حقوق النشر) في جميع الشاشات.
  * ==========================================
  */
 
@@ -143,7 +144,8 @@ export default function MathGame() {
     const correct = validateAnswer(puzzle, answerPayload);
     setIsCorrect(correct);
 
-    const pointsEarned = correct ? 10 : 0;
+    // 🆕 تغيير النقاط إلى 20
+    const pointsEarned = correct ? 20 : 0;
     const newScore = currentRoundScore + pointsEarned;
     if (correct) setCurrentRoundScore(newScore);
     
@@ -252,7 +254,6 @@ export default function MathGame() {
           </div>
         </div>
 
-        {/* 🆕 الفوتر */}
         <div className="mt-8 text-center text-white/50 text-xs font-bold w-full">
           {t.footer}
         </div>
@@ -278,7 +279,7 @@ export default function MathGame() {
              playerName={player.profile?.name || 'Player'} 
              score={currentRoundScore} 
              puzzleId="session_1" 
-             lang={lang} // 🆕 تمرير اللغة
+             lang={lang}
            />
         </div>
 
@@ -286,7 +287,6 @@ export default function MathGame() {
           {t.backToMenu}
         </button>
 
-        {/* 🆕 الفوتر */}
         <div className="mt-8 text-center text-white/50 text-xs font-bold w-full">
           {t.footer}
         </div>
@@ -329,7 +329,6 @@ export default function MathGame() {
 
         {showHint && puzzle?.puzzle_type === 'age' && (
           <div className="w-full bg-yellow-500/10 border border-yellow-500/30 p-5 rounded-2xl mb-4 text-yellow-200 text-base font-bold leading-relaxed">
-            {/* 🆕 تمرير عدد السنوات للتلميح */}
             {t.hint_age(puzzle.params.years)}
           </div>
         )}
@@ -443,7 +442,6 @@ export default function MathGame() {
           </div>
         )}
 
-        {/* 🆕 الفوتر */}
         <div className="mt-8 mb-4 text-center text-white/50 text-xs font-bold w-full">
           {t.footer}
         </div>
