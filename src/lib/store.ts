@@ -2,11 +2,10 @@
  * ==========================================
  * 📂 المسار: src/lib/store.ts
  * ⚙️ الوظيفة: تعريف أنواع بيانات اللاعب، الإنجازات، ودوال الحفظ والتحميل من الـ localStorage.
- * 📅 تاريخ الفحص: 2024-05-24
- * 🛠️ التعديلات: لا يوجد تعديل برمجي (الكود ممتاز ويحتوي على حماية من التلوث وترحيل البيانات). تمت إضافة الوسم فقط.
+ * 📅 تاريخ التعديل: 2026-07-24
+ * 🛠️ التعديلات: إضافة إنجاز "المثابر" (persistent_20) لحل 20 لغزاً.
  * ==========================================
  */
-// src/lib/store.ts
 
 export interface Achievement {
   id: string;
@@ -19,7 +18,8 @@ export const ALL_ACHIEVEMENTS: Achievement[] = [
   { id: 'first_win', title: 'المبتدئ الذكي', description: 'حل أول لغز بنجاح', icon: '🐣' },
   { id: 'score_50', title: 'السريع', description: 'تحقيق 50 نقطة في جولة واحدة', icon: '⚡' },
   { id: 'score_100', title: 'الأسطورة', description: 'وصول أعلى نتيجة إلى 100 نقطة', icon: '🏆' },
-  { id: 'challenge_win', title: 'قاهر التحديات', description: 'الفوز في أول تحدٍ ضد صديق', icon: '⚔️' },
+  { id: 'challenge_win', title: 'قاهر التحديات', description: 'الفوز أو التعادل في تحدٍ ضد صديق', icon: '⚔️' },
+  { id: 'persistent_20', title: 'المثابر', description: 'حل 20 لغزاً إجمالاً', icon: '🏅' }, // 🆕 اللقب الجديد
 ];
 
 export interface PlayerProfile {
@@ -42,7 +42,6 @@ export interface PlayerProfile {
 
 const STORAGE_KEY = 'math_magic_player_store_v1';
 
-// دالة لإنشاء نسخة افتراضية جديدة في كل مرة (تمنع تلوث الذاكرة)
 const createDefaultProfile = (): PlayerProfile => ({
   schemaVersion: 1,
   profile: {
@@ -69,7 +68,6 @@ export function loadPlayerStore(): PlayerProfile {
     if (stored) {
       const data: PlayerProfile = JSON.parse(stored);
       if (data.schemaVersion === 1) {
-        // الدمج الآمن: نضمن وجود الحقول الجديدة حتى لو كانت البيانات قديمة
         return {
           ...createDefaultProfile(),
           ...data,
@@ -80,7 +78,6 @@ export function loadPlayerStore(): PlayerProfile {
       }
     }
     
-    // ترحيل البيانات القديمة (أفضل نتيجة) بأمان
     const legacyScore = localStorage.getItem('math_magic_score');
     const initialProfile = createDefaultProfile();
     
