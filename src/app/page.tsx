@@ -2,10 +2,11 @@
  * ==========================================
  * 📂 المسار: src/app/page.tsx
  * ⚙️ الوظيفة: الشاشة الرئيسية وشاشة اللعب (الواجهة الأمامية).
- * 📅 تاريخ التعديل: 2024-05-24
+ * 📅 تاريخ التعديل: 2026-07-24
  * 🛠️ التعديلات: 
- * - توليد المصفوفة الكاملة للأسئلة (sessionQuestions) عند بدء اللعبة لمنع مشاكل Re-render.
- * - الاعتماد على getSessionPlan و generatePuzzle لضمان تباين مضمون 100%.
+ * - تمرير اللغة إلى مكون ChallengeShare.
+ * - تمرير عدد السنوات لدالة hint_age الديناميكية.
+ * - إضافة الفوتر (حقوق النشر) في جميع الشاشات (القائمة، اللعب، النتائج).
  * ==========================================
  */
 
@@ -37,10 +38,7 @@ export default function MathGame() {
   const [isMounted, setIsMounted] = useState(false);
   const [screen, setScreen] = useState('menu');
   
-  // 🆕 المصفوفة الكاملة للأسئلة المحملة مسبقاً
   const [sessionQuestions, setSessionQuestions] = useState<Puzzle[]>([]);
-  
-  // السؤال الحالي المعروض
   const [puzzle, setPuzzle] = useState<Puzzle | null>(null);
   
   const [currentRoundScore, setCurrentRoundScore] = useState(0);
@@ -93,7 +91,6 @@ export default function MathGame() {
     headerBg: 'bg-transparent backdrop-blur-md border-b border-white/10',
   };
 
-  // إعداد واجهة السؤال
   const preparePuzzleState = (newPuzzle: Puzzle) => {
     setPuzzle(newPuzzle);
     setInputAnswers({ chickens: 0, ducks: 0, rabbits: 0 });
@@ -118,7 +115,6 @@ export default function MathGame() {
   };
 
   const startGame = () => {
-    // 🛡️ توليد الجلسة كاملة دفعة واحدة (Client-side)
     const plan = getSessionPlan();
     const generatedQuestions = plan.map(variant => generatePuzzle(lang, variant));
     
@@ -255,6 +251,11 @@ export default function MathGame() {
             })}
           </div>
         </div>
+
+        {/* 🆕 الفوتر */}
+        <div className="mt-8 text-center text-white/50 text-xs font-bold w-full">
+          {t.footer}
+        </div>
       </div>
     );
   }
@@ -273,12 +274,22 @@ export default function MathGame() {
         </div>
 
         <div className="w-full max-w-md">
-           <ChallengeShare playerName={player.profile?.name || 'Player'} score={currentRoundScore} puzzleId="session_1" />
+           <ChallengeShare 
+             playerName={player.profile?.name || 'Player'} 
+             score={currentRoundScore} 
+             puzzleId="session_1" 
+             lang={lang} // 🆕 تمرير اللغة
+           />
         </div>
 
         <button onClick={() => setScreen('menu')} className="mt-8 px-8 py-4 rounded-2xl bg-white/10 hover:bg-white/20 border-2 border-white/20 text-white font-black text-xl transition-all shadow-xl">
           {t.backToMenu}
         </button>
+
+        {/* 🆕 الفوتر */}
+        <div className="mt-8 text-center text-white/50 text-xs font-bold w-full">
+          {t.footer}
+        </div>
       </div>
     );
   }
@@ -318,7 +329,8 @@ export default function MathGame() {
 
         {showHint && puzzle?.puzzle_type === 'age' && (
           <div className="w-full bg-yellow-500/10 border border-yellow-500/30 p-5 rounded-2xl mb-4 text-yellow-200 text-base font-bold leading-relaxed">
-            {t.hint_age()}
+            {/* 🆕 تمرير عدد السنوات للتلميح */}
+            {t.hint_age(puzzle.params.years)}
           </div>
         )}
 
@@ -430,6 +442,11 @@ export default function MathGame() {
             </button>
           </div>
         )}
+
+        {/* 🆕 الفوتر */}
+        <div className="mt-8 mb-4 text-center text-white/50 text-xs font-bold w-full">
+          {t.footer}
+        </div>
       </main>
     </div>
   );
