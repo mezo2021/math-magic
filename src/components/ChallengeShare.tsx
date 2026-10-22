@@ -1,3 +1,11 @@
+/**
+ * ==========================================
+ * 📂 المسار: src/components/ChallengeShare.tsx
+ * ⚙️ الوظيفة: زر مشاركة التحدي عبر تطبيقات الهاتف (WhatsApp, Telegram) أو نسخ الرابط.
+ * 📅 تاريخ الفحص: 2024-05-24
+ * 🛠️ التعديلات: لا يوجد تعديل برمجي (الكود ممتاز ويستخدم Web Share API). تمت إضافة الوسم فقط.
+ * ==========================================
+ */
 'use client';
 import React, { useState } from 'react';
 import { createChallengeToken } from '@/lib/challenge';
