@@ -4,6 +4,7 @@
  * ⚙️ الوظيفة: قاموس الترجمة (عربي/إنجليزي) ونصوص الألغاز والحلول.
  * 📅 تاريخ التعديل: 2026-07-24
  * 🛠️ التعديلات: 
+ * - تغيير النقاط من (+10) إلى (+20) في اللغتين.
  * - تحديث دالة hint_age لتكون ديناميكية تعتمد على عدد السنوات.
  * - إضافة مفتاح footer لحقوق النشر (2026).
  * - إضافة دالة share_message لنصوص المشاركة المترجمة.
@@ -65,7 +66,7 @@ export const translations: Record<Language, TranslationSchema> = {
     newAchievement: "إنجاز جديد:",
     question: "سؤال",
     checkAnswer: "تحقق من الإجابة",
-    correctAnswer: "إجابة صحيحة! 🎉 (+10)",
+    correctAnswer: "إجابة صحيحة! 🎉 (+20)",
     wrongAnswer: "إجابة خاطئة ⏳",
     nextQuestion: "جاري الانتقال للسؤال التالي...",
     sessionScore: "نقاط هذه الجلسة",
@@ -124,7 +125,7 @@ export const translations: Record<Language, TranslationSchema> = {
     newAchievement: "New Achievement:",
     question: "Question",
     checkAnswer: "Check Answer",
-    correctAnswer: "Correct! 🎉 (+10)",
+    correctAnswer: "Correct! 🎉 (+20)",
     wrongAnswer: "Wrong! ⏳",
     nextQuestion: "Moving to next question...",
     sessionScore: "Session Score",
