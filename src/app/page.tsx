@@ -23,8 +23,8 @@ import { translations } from '@/lib/i18n';
 const AchievementToast = ({ achievement, text }: { achievement: string | null, text: string }) => {
   if (!achievement) return null;
   return (
-    <div className="fixed top-6 left-1/2 transform -translate-x-1/2 z-50 animate-bounce">
-      <div className="bg-gradient-to-r from-amber-400 to-yellow-500 text-black px-8 py-4 rounded-2xl shadow-[0_0_30px_rgba(251,191,36,0.6)] font-black text-xl flex items-center gap-3 border-2 border-yellow-200">
+    <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 animate-bounce max-w-[calc(100vw-2rem)]">
+      <div className="bg-gradient-to-r from-amber-400 to-yellow-500 text-black px-5 py-3 rounded-2xl shadow-[0_0_30px_rgba(251,191,36,0.6)] font-black text-base sm:text-xl flex items-center gap-3 border-2 border-yellow-200">
         <span>{text}</span>
         <span>{achievement}</span>
       </div>
@@ -330,7 +330,7 @@ export default function MathGame() {
           </p>
         </div>
 
-        {puzzle?.puzzle_type === 'age' && !isAnswered && (
+        {puzzle && !isAnswered && (
           <div className="w-full flex justify-end mb-4">
             <button 
               onClick={() => setShowHint(!showHint)} 
@@ -341,9 +341,12 @@ export default function MathGame() {
           </div>
         )}
 
-        {showHint && puzzle?.puzzle_type === 'age' && (
+        {showHint && puzzle && (
           <div className="w-full bg-yellow-500/10 border border-yellow-500/30 p-5 rounded-2xl mb-4 text-yellow-200 text-base font-bold leading-relaxed">
-            {t.hint_age(puzzle.params.years)}
+            {puzzle.puzzle_type === 'farm' ? t.hint_farm :
+             puzzle.puzzle_type === 'distance' ? t.hint_distance :
+             puzzle.puzzle_type === 'sequence' ? t.hint_sequence(puzzle.params.seq ?? []) :
+             t.hint_age(puzzle.params.years)}
           </div>
         )}
 
