@@ -46,6 +46,9 @@ export interface TranslationSchema {
   solution_age: (age: number, years: number) => string;
 
   hint_age: (years: number) => string;
+  hint_farm: string;
+  hint_distance: string;
+  hint_sequence: (seq: number[]) => string;
   share_message: (score: number, url: string) => string;
 
   chickens: string;
@@ -104,6 +107,9 @@ export const translations: Record<Language, TranslationSchema> = {
 
     hint_age: (years: number) => 
       `تلميح: لاحظ أن (3س) تلغي بعضها البعض. يتبقى لديك (3 × ${years}) + (3 × ${years}) وهو ما يساوي (6 × ${years}). جرب حساب هذا الناتج وقارنه بالخيارات.`,
+    hint_farm: "ابدأ بعدد الأرانب: عدد البط يساوي 4 أضعافها، وعدد الدجاج يساوي ضعفي عدد البط. استخدم العدد الناقص للتحقق من إجابتك.",
+    hint_distance: "انتبه إلى صياغة السؤال: هل يتغير بُعد المدينتين الحقيقي إذا سافرت بينهما مرة أو عدة مرات؟ ميّز بين المسافة الثابتة والمسافة التي قطعتها.",
+    hint_sequence: (seq: number[]) => `احسب الفرق بين أول رقمين (${seq[1] - seq[0]}). تحقّق هل يتكرر الفرق نفسه بين بقية الأرقام.`,
 
     share_message: (score: number, url: string) => 
       `🧠 تحدي سحر الرياضيات!\nلقد حققت ${score} نقطة! هل تستطيع التغلب عليّ؟ 🏆\n\nاضغط على الرابط لقبول التحدي:\n${url}`,
@@ -163,6 +169,9 @@ export const translations: Record<Language, TranslationSchema> = {
 
     hint_age: (years: number) =>
       `Hint: Notice that (3x) cancels out. You are left with (3 × ${years}) + (3 × ${years}) which equals (6 × ${years}). Try calculating this result and compare it to the options.`,
+    hint_farm: "Start with the rabbits: ducks are four times the rabbits, and chickens are twice the ducks. Use the missing-number clue to check your answer.",
+    hint_distance: "Pay attention to the wording: does the actual distance between two cities change when you travel between them once or several times? Distinguish fixed distance from distance traveled.",
+    hint_sequence: (seq: number[]) => `Find the difference between the first two numbers (${seq[1] - seq[0]}). Check whether the same difference repeats throughout the sequence.`,
 
     share_message: (score: number, url: string) => 
       `🧠 Math Magic Challenge!\nI scored ${score} points! Can you beat me? 🏆\n\nClick the link to accept the challenge:\n${url}`,
