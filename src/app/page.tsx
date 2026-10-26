@@ -229,8 +229,11 @@ export default function MathGame() {
         <AchievementToast achievement={toastAchievement} text={t.newAchievement} />
         
         <div className="absolute top-6 left-6 flex gap-3 z-10">
-          <button onClick={toggleTheme} className="px-5 py-2.5 rounded-2xl text-sm font-black bg-white/10 border-2 border-white/20 hover:bg-white/20 backdrop-blur-md transition-all">
-            🎨 {isBarbie ? 'Barbie 🌸' : 'Terminator 🤖'}
+          <button onClick={toggleTheme} className="px-5 py-2.5 rounded-2xl text-sm font-black bg-white/10 border-2 border-white/20 hover:bg-white/20 backdrop-blur-md transition-all flex items-center justify-center gap-2">
+            {isBarbie ? 'Barbie' : 'Terminator'} 
+            <span className={isBarbie ? 'glow-butterfly text-lg' : 'glow-diamond text-lg'}>
+              {isBarbie ? '🦋' : '💎'}
+            </span>
           </button>
           <button onClick={toggleLanguage} className="px-5 py-2.5 rounded-2xl text-sm font-black bg-white/10 border-2 border-white/20 hover:bg-white/20 backdrop-blur-md transition-all">
             🌐 {lang === 'ar' ? 'English' : 'عربي'}
