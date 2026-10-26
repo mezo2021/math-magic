@@ -6,8 +6,8 @@
  * 🛠️ التعديلات:
  * - إضافة مؤقت 30 ثانية لكل سؤال.
  * - عند انتهاء الوقت: تعتبر الإجابة خاطئة ويظهر الحل.
- * - يتحول لون المؤقت إلى الأحمر عند بقاء 10 ثوانٍ أو أقل.
- * - إعادة ضبط المؤقت تلقائيًا عند كل سؤال جديد.
+ * - إضافة ميزة مراجعة الأخطاء في شاشة النتائج.
+ * - حفظ السؤال والحل لكل إجابة خاطئة أو منتهية الوقت.
  * ==========================================
  */
 
@@ -21,7 +21,18 @@ import { usePlayerStore } from '@/lib/usePlayerStore';
 import { ALL_ACHIEVEMENTS } from '@/lib/store';
 import { translations } from '@/lib/i18n';
 
-const AchievementToast = ({ achievement, text }: { achievement: string | null, text: string }) => {
+type WrongAnswer = {
+  puzzle: Puzzle;
+  reason: 'wrong' | 'time';
+};
+
+const AchievementToast = ({
+  achievement,
+  text,
+}: {
+  achievement: string | null;
+  text: string;
+}) => {
   if (!achievement) return null;
 
   return (
@@ -64,9 +75,12 @@ export default function MathGame() {
   const [activeChallenge, setActiveChallenge] = useState<ChallengeData | null>(null);
   const [toastAchievement, setToastAchievement] = useState<string | null>(null);
 
-  // 🆕 حالة مؤقت السؤال
+  // 🆕 مؤقت السؤال
   const [timeLeft, setTimeLeft] = useState(QUESTION_TIME);
   const [timeExpired, setTimeExpired] = useState(false);
+
+  // 🆕 قائمة الأسئلة الخاطئة لمراجعتها في النهاية
+  const [wrongAnswers, setWrongAnswers] = useState<WrongAnswer[]>([]);
 
   useEffect(() => {
     setIsMounted(true);
@@ -80,7 +94,6 @@ export default function MathGame() {
     }
   }, []);
 
-  // 🆕 تشغيل مؤقت السؤال وإيقافه عند الحل أو مغادرة شاشة اللعب
   useEffect(() => {
     if (screen !== 'puzzle' || isAnswered || !puzzle) return;
 
@@ -89,6 +102,12 @@ export default function MathGame() {
       setIsAnswered(true);
       setIsCorrect(false);
       setShowSolution(true);
+
+      setWrongAnswers((previous) => [
+        ...previous,
+        { puzzle, reason: 'time' },
+      ]);
+
       return;
     }
 
@@ -131,6 +150,49 @@ export default function MathGame() {
     headerBg: 'bg-transparent backdrop-blur-md border-b border-white/10',
   };
 
+  const getPuzzleQuestionText = (item: Puzzle) => {
+    if (item.puzzle_type === 'farm') {
+      return t.farm_template(item.params.missing ?? 0);
+    }
+
+    if (item.puzzle_type === 'distance') {
+      return t.distance_template(item.params.distance ?? 0);
+    }
+
+    if (item.puzzle_type === 'sequence') {
+      return t.sequence_template((item.params.seq ?? []).join(' , '));
+    }
+
+    if (item.puzzle_type === 'age') {
+      return t.age_template(item.params.years ?? 0);
+    }
+
+    return '';
+  };
+
+  const getPuzzleSolutionText = (item: Puzzle) => {
+    if (item.puzzle_type === 'farm') {
+      return t.solution_farm(item.correct_answer.rabbits);
+    }
+
+    if (item.puzzle_type === 'distance') {
+      return t.solution_distance(item.params.distance);
+    }
+
+    if (item.puzzle_type === 'sequence') {
+      return t.solution_sequence(item.correct_answer.value);
+    }
+
+    if (item.puzzle_type === 'age') {
+      const correctAge =
+        item.options?.find((option: any) => option.id === 'opt1')?.value ?? 0;
+
+      return t.solution_age(correctAge, item.params.years);
+    }
+
+    return '';
+  };
+
   const preparePuzzleState = (newPuzzle: Puzzle) => {
     setPuzzle(newPuzzle);
     setInputAnswers({ chickens: 0, ducks: 0, rabbits: 0 });
@@ -141,7 +203,6 @@ export default function MathGame() {
     setShowSolution(false);
     setShowHint(false);
 
-    // 🆕 إعادة ضبط المؤقت للسؤال الجديد
     setTimeLeft(QUESTION_TIME);
     setTimeExpired(false);
   };
@@ -149,8 +210,8 @@ export default function MathGame() {
   const handleAnimalCounter = (delta: number) => {
     if (isAnswered) return;
 
-    setInputAnswers((prev: any) => {
-      const newRabbits = Math.max(0, (prev.rabbits || 0) + delta);
+    setInputAnswers((previous: any) => {
+      const newRabbits = Math.max(0, (previous.rabbits || 0) + delta);
 
       return {
         rabbits: newRabbits,
@@ -167,6 +228,7 @@ export default function MathGame() {
     setSessionQuestions(generatedQuestions);
     setCurrentRoundScore(0);
     setQuestionsAnswered(0);
+    setWrongAnswers([]);
     setScreen('puzzle');
 
     preparePuzzleState(generatedQuestions[0]);
@@ -191,6 +253,13 @@ export default function MathGame() {
     const correct = validateAnswer(puzzle, answerPayload);
     setIsCorrect(correct);
 
+    if (!correct) {
+      setWrongAnswers((previous) => [
+        ...previous,
+        { puzzle, reason: 'wrong' },
+      ]);
+    }
+
     const pointsEarned = correct ? 20 : 0;
     const newScore = currentRoundScore + pointsEarned;
 
@@ -198,30 +267,26 @@ export default function MathGame() {
 
     let justUnlockedStr: string | null = null;
 
-    updatePlayer((prev) => {
-      const highest = Math.max(prev.progress.highestScore, newScore);
-      const solvedCount = prev.progress.totalPuzzlesSolved + (correct ? 1 : 0);
-      const newAchievements = [...(prev.progress.achievements || [])];
+    updatePlayer((previous) => {
+      const highest = Math.max(previous.progress.highestScore, newScore);
+      const solvedCount = previous.progress.totalPuzzlesSolved + (correct ? 1 : 0);
+      const newAchievements = [...(previous.progress.achievements || [])];
 
-      // 1. المبتدئ الذكي
       if (solvedCount >= 1 && !newAchievements.includes('first_win')) {
         newAchievements.push('first_win');
         justUnlockedStr = lang === 'ar' ? '🐣 المبتدئ الذكي' : '🐣 Smart Beginner';
       }
 
-      // 2. السريع
       if (newScore >= 50 && !newAchievements.includes('score_50')) {
         newAchievements.push('score_50');
         justUnlockedStr = lang === 'ar' ? '⚡ السريع' : '⚡ Fast';
       }
 
-      // 3. الأسطورة
       if (highest >= 100 && !newAchievements.includes('score_100')) {
         newAchievements.push('score_100');
         justUnlockedStr = lang === 'ar' ? '🏆 الأسطورة' : '🏆 Legend';
       }
 
-      // 4. قاهر التحديات
       if (
         activeChallenge &&
         newScore >= activeChallenge.score &&
@@ -231,16 +296,15 @@ export default function MathGame() {
         justUnlockedStr = lang === 'ar' ? '⚔️ قاهر التحديات' : '⚔️ Challenger';
       }
 
-      // 5. المثابر
       if (solvedCount >= 20 && !newAchievements.includes('persistent_20')) {
         newAchievements.push('persistent_20');
         justUnlockedStr = lang === 'ar' ? '🏅 المثابر' : '🏅 Persistent';
       }
 
       return {
-        ...prev,
+        ...previous,
         progress: {
-          ...prev.progress,
+          ...previous.progress,
           highestScore: highest,
           totalPuzzlesSolved: solvedCount,
           achievements: newAchievements,
@@ -257,29 +321,30 @@ export default function MathGame() {
   const handleNextQuestion = () => {
     if (questionsAnswered + 1 >= sessionQuestions.length) {
       setScreen('end');
-    } else {
-      const nextIndex = questionsAnswered + 1;
-      setQuestionsAnswered(nextIndex);
-      preparePuzzleState(sessionQuestions[nextIndex]);
+      return;
     }
+
+    const nextIndex = questionsAnswered + 1;
+    setQuestionsAnswered(nextIndex);
+    preparePuzzleState(sessionQuestions[nextIndex]);
   };
 
   const toggleTheme = () => {
-    updatePlayer((prev) => ({
-      ...prev,
+    updatePlayer((previous) => ({
+      ...previous,
       preferences: {
-        ...prev.preferences,
-        theme: prev.preferences?.theme === 'ocean' ? 'barbie' : 'ocean',
+        ...previous.preferences,
+        theme: previous.preferences?.theme === 'ocean' ? 'barbie' : 'ocean',
       },
     }));
   };
 
   const toggleLanguage = () => {
-    updatePlayer((prev) => ({
-      ...prev,
+    updatePlayer((previous) => ({
+      ...previous,
       preferences: {
-        ...prev.preferences,
-        language: prev.preferences?.language === 'ar' ? 'en' : 'ar',
+        ...previous.preferences,
+        language: previous.preferences?.language === 'ar' ? 'en' : 'ar',
       },
     }));
   };
@@ -383,12 +448,12 @@ export default function MathGame() {
           type="text"
           placeholder={t.enterName}
           value={player.profile?.name || ''}
-          onChange={(e) => {
-            const newName = e.target.value;
+          onChange={(event) => {
+            const newName = event.target.value;
 
-            updatePlayer((prev) => ({
-              ...prev,
-              profile: { ...prev.profile, name: newName },
+            updatePlayer((previous) => ({
+              ...previous,
+              profile: { ...previous.profile, name: newName },
             }));
           }}
           className={`mb-8 ${themeStyles.inputBg} p-5 rounded-3xl text-center w-full max-w-md focus:outline-none text-2xl font-black placeholder-white/50 backdrop-blur-md`}
@@ -448,6 +513,64 @@ export default function MathGame() {
           <p className="text-7xl font-black text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 via-pink-300 to-cyan-300 drop-shadow-2xl">
             {currentRoundScore}
           </p>
+        </div>
+
+        {/* 🆕 مراجعة أخطاء الجلسة */}
+        <div className="w-full max-w-md mb-8">
+          {wrongAnswers.length === 0 ? (
+            <div className="bg-emerald-500/20 border-2 border-emerald-400 p-6 rounded-3xl shadow-[0_0_25px_rgba(16,185,129,0.25)]">
+              <h2 className="text-2xl font-black text-emerald-200 mb-2">
+                {lang === 'ar' ? '🌟 أداء رائع!' : '🌟 Excellent work!'}
+              </h2>
+
+              <p className="text-white font-bold">
+                {lang === 'ar'
+                  ? 'أجبت عن جميع الأسئلة بشكل صحيح.'
+                  : 'You answered every question correctly.'}
+              </p>
+            </div>
+          ) : (
+            <div className={`${themeStyles.card} p-5 rounded-3xl text-start`}>
+              <h2 className="text-2xl font-black text-yellow-300 text-center mb-5">
+                {lang === 'ar'
+                  ? `📝 مراجعة الأخطاء (${wrongAnswers.length})`
+                  : `📝 Review mistakes (${wrongAnswers.length})`}
+              </h2>
+
+              <div className="space-y-4">
+                {wrongAnswers.map((item, index) => (
+                  <div
+                    key={`${item.puzzle.id}-${index}`}
+                    className="bg-red-500/10 border border-red-400/40 rounded-2xl p-4"
+                  >
+                    <p className="text-red-200 font-black mb-3">
+                      {item.reason === 'time'
+                        ? lang === 'ar'
+                          ? `⏰ السؤال ${index + 1}: انتهى الوقت`
+                          : `⏰ Question ${index + 1}: Time expired`
+                        : lang === 'ar'
+                          ? `❌ السؤال ${index + 1}: إجابة خاطئة`
+                          : `❌ Question ${index + 1}: Wrong answer`}
+                    </p>
+
+                    <p className="text-white font-bold whitespace-pre-line leading-relaxed mb-3">
+                      {getPuzzleQuestionText(item.puzzle)}
+                    </p>
+
+                    <div className="bg-black/30 border border-white/10 rounded-xl p-3">
+                      <p className="text-yellow-200 text-sm font-black mb-1">
+                        {lang === 'ar' ? '✅ الحل الصحيح:' : '✅ Correct solution:'}
+                      </p>
+
+                      <p className="text-white text-sm font-bold whitespace-pre-line leading-relaxed">
+                        {getPuzzleSolutionText(item.puzzle)}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="w-full max-w-md">
@@ -612,7 +735,7 @@ export default function MathGame() {
               disabled={isAnswered}
               placeholder={lang === 'ar' ? 'اكتب الرقم هنا...' : 'Type answer...'}
               value={singleInput}
-              onChange={(e) => setSingleInput(e.target.value)}
+              onChange={(event) => setSingleInput(event.target.value)}
               className={`w-full text-center ${themeStyles.inputBg} rounded-2xl p-5 text-4xl font-black focus:outline-none transition-all`}
             />
           </div>
@@ -661,18 +784,7 @@ export default function MathGame() {
                   className="text-white text-base font-bold leading-relaxed text-start whitespace-pre-line"
                   dir={isRTL ? 'rtl' : 'ltr'}
                 >
-                  {puzzle.puzzle_type === 'farm'
-                    ? t.solution_farm(puzzle.correct_answer.rabbits)
-                    : puzzle.puzzle_type === 'distance'
-                      ? t.solution_distance(puzzle.params.distance)
-                      : puzzle.puzzle_type === 'sequence'
-                        ? t.solution_sequence(puzzle.correct_answer.value)
-                        : puzzle.puzzle_type === 'age'
-                          ? t.solution_age(
-                              puzzle.options?.find((o: any) => o.id === 'opt1')?.value ?? 0,
-                              puzzle.params.years
-                            )
-                          : ''}
+                  {getPuzzleSolutionText(puzzle)}
                 </p>
               </div>
             )}
