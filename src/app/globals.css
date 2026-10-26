@@ -14,3 +14,23 @@ body {
   background-color: #0f172a;
   color: white;
 }
+
+/* Mobile-friendly defaults: respect device safe areas and keep controls readable. */
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body {
+  min-height: 100dvh;
+  padding-bottom: env(safe-area-inset-bottom);
+  overscroll-behavior-y: contain;
+}
+
+button, input {
+  touch-action: manipulation;
+}
+
+input {
+  font-size: max(16px, 1em);
+}
